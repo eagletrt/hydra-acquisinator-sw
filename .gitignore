@@ -15,3 +15,8 @@ binaries/**
 
 # probably not correct
 docs/inverse_formulas_ammo_compression.py
+
+.pio/
+
+# sessioni registrate da Tools/read_both_acquisinators.py
+Tools/sessions/

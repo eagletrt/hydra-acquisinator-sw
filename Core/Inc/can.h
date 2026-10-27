@@ -30,8 +30,6 @@ extern "C" {
 
 /* USER CODE BEGIN Includes */
 
-#include "secondary_network.h"
-
 /* USER CODE END Includes */
 
 extern CAN_HandleTypeDef hcan;
@@ -44,24 +42,7 @@ void MX_CAN_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 
-int can_routine(void);
-
-void acquisinatore_send_version(void);
-void acquisinatore_send_errors(void);
-void acquisinatore_send_calibration_offsets(float off1, float off2);
-void acquisinatore_send_debug_5_values(float v1, float v2, float v3);
-void acquisinatore_send_debug_6_values(float v1, float v2, float v3);
-void acquisinatore_send_debug_7_values(float v1, float v2, float v3);
-void acquisinatore_send_debug_8_values(float v1, float v2, float v3);
-
-void acquisinatore_send_strain_gauge_val_fl_wheel(secondary_link_deformation_fl_wheel_rod_id rod_id, float strain_gauge_val);
-void acquisinatore_send_strain_gauge_val_fr_wheel(secondary_link_deformation_fr_wheel_rod_id rod_id, float strain_gauge_val);
-void acquisinatore_send_strain_gauge_val_rl_wheel(secondary_link_deformation_rl_wheel_rod_id rod_id, float strain_gauge_val);
-void acquisinatore_send_strain_gauge_val_rr_wheel(secondary_link_deformation_rr_wheel_rod_id rod_id, float strain_gauge_val);
-void acquisinatore_send_water_cooling_temp(double radiator_input, double radiator_output);
-void acquisinatore_send_air_cooling_temp(double air_temperature);
-void acquisinatore_rear_send_ammo_pos(float rl, float rr);
-void acquisinatore_front_send_ammo_pos(float fl, float fr);
+void acquisinatore_send_adc(float voltage_mV, uint16_t adc_raw, uint16_t adc_filtered);
 
 /* USER CODE END Prototypes */
 

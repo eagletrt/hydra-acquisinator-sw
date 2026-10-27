@@ -47,9 +47,6 @@
 #error INVALID ACQUISINATOR_ID == ACQUISINATOR_ID_0
 #endif
 
-// WARNING: IF 1 IT RESETS THE BOARD TO DEFAULT CONFIGURATIONS!!!
-#define ACQUISINATOR_RESETS_TO_DEFAULT_CONFIGS (0U)
-
 /****
  * Memory mapping:
  * 
@@ -100,27 +97,47 @@ typedef enum { ltc1865_DIFF, ltc1865_DIFF_INVERTED, ltc1865_SE_CH1, ltc1865_SE_C
 #define ACQUISINATORE_OLD_MOVING_AVG    (3U)
 #define ACQUISINATORE_FILTER_TYPE       ACQUISINATORE_SIMPLE_MOVING_AVG
 
-#define ACQUISINATORE_SEND_CALIBRATIONS_OFFSETS      (0U)
-#define ACQUISINATORE_LINK_DEFORMATION_SAMPLING_RATE (10U)  // Hz
-#define ACQUISINATORE_AMMO_POSITION_SAMPLING_RATE    (10U)  // Hz
+// The ADC is sampled by the TIM2 interrupt at a fixed rate and filtered sample by sample, then one
+// value every ACQUISINATORE_ADC_SEND_EVERY samples is sent on CAN. Two filters, both cancel the 50 Hz
+// mains interference picked up by the bridge instead of letting it alias into slow drifts:
+//  - AVG_20MS: moving average over exactly one mains period (zeros at 50 Hz and all its harmonics).
+//    Bandwidth ~22 Hz (-3 dB), no overshoot, 10 ms delay. Lowest noise: static and slow tests.
+//  - NOTCH_LP: notches at 50, 100, 150 Hz + 4th order Butterworth low-pass at SEND_RATE / 4 (75 Hz at
+//    300 Hz). Flat to ~30 Hz at 300 Hz, ~6 ms delay, ~13% overshoot and ~100 ms ringing on a
+//    step, about twice the noise of AVG_20MS (wider band). Dynamic tests.
+#define ACQUISINATORE_ADC_FILTER_AVG_20MS (1U)
+#define ACQUISINATORE_ADC_FILTER_NOTCH_LP (2U)
 
-#define ACQUISINATORE_LINK_DEFORMATION_DELAY_MS (1000U / ACQUISINATORE_LINK_DEFORMATION_SAMPLING_RATE)  // ms
-#define ACQUISINATORE_AMMO_POSITION_DELAY_MS    (1000U / ACQUISINATORE_AMMO_POSITION_SAMPLING_RATE)     // ms
+// ---- the two settings to change ----
+#define ACQUISINATORE_ADC_FILTER    ACQUISINATORE_ADC_FILTER_AVG_20MS
+// frames per second on CAN: 300 for bench tests; lower in the car to load the bus less
+// (~130 bit per frame: 300 Hz = 4% of 1 Mbit/s). Must divide 1500: 300, 250, 150, 100, 75, 60, 50...
+#define ACQUISINATORE_ADC_SEND_RATE (300U)
+// ------------------------------------
 
-enum {
-    ACQUISINATOR_SECONDARY_ACQUISINATOR_JMP_TO_BLT = 0,
-    ACQUISINATOR_SECONDARY_LINK_DEFORMATION_SET_CALIBRATION,
-    ACQUISINATOR_SECONDARY_AMMO_POS_SET_CALIBRATION,
-    N_MONITORED_MESSAGES
-};
+#define ACQUISINATORE_ADC_SAMPLE_RATE  (1500U)  // Hz, TIM2 update rate
+#define ACQUISINATORE_ADC_AVG_SAMPLES  (30U)    // AVG_20MS: 30 / 1500 Hz = 20 ms = one 50 Hz period
+#define ACQUISINATORE_ADC_SEND_EVERY   (ACQUISINATORE_ADC_SAMPLE_RATE / ACQUISINATORE_ADC_SEND_RATE)
+// NOTCH_LP: the low-pass follows the send rate, so a lower rate does not alias
+#define ACQUISINATORE_ADC_LP_CUTOFF_HZ ((float)ACQUISINATORE_ADC_SEND_RATE / 4.0f)
+#define ACQUISINATORE_ADC_NOTCH_Q      (5.0f)  // higher = narrower notch but longer ringing
 
-#define CAN_MESSAGES_HANDLERS                            \
-    {secondary_acquisinator_jmp_to_blt_handler,          \
-     secondary_link_deformation_set_calibration_handler, \
-     secondary_ammo_pos_set_calibration_handler}
+#if ACQUISINATORE_ADC_FILTER != ACQUISINATORE_ADC_FILTER_AVG_20MS && \
+    ACQUISINATORE_ADC_FILTER != ACQUISINATORE_ADC_FILTER_NOTCH_LP
+#error "unknown ACQUISINATORE_ADC_FILTER"
+#endif
+#if ACQUISINATORE_ADC_SAMPLE_RATE % ACQUISINATORE_ADC_SEND_RATE != 0U
+#error "ACQUISINATORE_ADC_SEND_RATE must divide ACQUISINATORE_ADC_SAMPLE_RATE"
+#endif
+#if (ACQUISINATORE_ADC_AVG_SAMPLES * 1000U / ACQUISINATORE_ADC_SAMPLE_RATE) % 20U != 0U
+#error "the ADC average must last a whole number of 50 Hz periods (multiple of 20 ms)"
+#endif
+#if (ACQUISINATORE_ADC_AVG_SAMPLES * 1000U) % ACQUISINATORE_ADC_SAMPLE_RATE != 0U
+#error "the ADC average must last a whole number of milliseconds"
+#endif
 
-// #define AMMO_COMPRESSION_CALIBRATION_VALUE (4058.554551620902f) // wrong
-#define LINK_DEFORMATION_CALIBRATION_VALUE (1.5010000000001358f)
+// the only frame sent (format in Tools/acquisinator_hydra_adc.dbc), free on the primary network
+#define ACQUISINATORE_ADC_CAN_ID (0x7B0U)
 
 typedef enum {
     acquisinatore_led_code_no_error = 0,
@@ -138,9 +155,6 @@ void system_reset(void);
 
 #define ACQUISINATORE_VREF_INT (3.29f)
 
-#define NTC_COOLING_DELAY_MS (200U)
-#define ROD_DELAY_MS         (1U)
-
 #define STRAIN_GAUGE_R1   (352.0f)
 #define STRAIN_GAUGE_R2   (350.0f)
 #define STRAIN_GAUGE_R3   (352.0f)
@@ -149,31 +163,5 @@ void system_reset(void);
 #define STRAIN_GAUGE_VREF (1.501f)
 #define STRAIN_GAUGE_VS   (3.294f)
 #define STRAIN_GAUGE_K    (2.01f)
-
-/*
-0 mV - 3260 mV
-Potentiometer length: 123 mm to 173 mm
-*/
-#define OFFSET_FOR_SECOND_CHANNEL_mV (0.854f)
-#define MILLIVOLT_PER_MM             (65.2f)
-#define POT_TO_AMMO_POS(s)           ((0.851361811586514f * s) + (0.000533184086178801f * s * s))
-#define FROM_MILLIVOLT_TO_POT_POS(v) (((3260.0f - (float)v)) / MILLIVOLT_PER_MM);
-#define DEF_POT_DX_REST_POS          (0.0f)
-#define DEF_POT_SX_REST_POS          (0.0f)
-#define AMMO_SX_REST_POS             POT_TO_AMMO_POS(POT_SX_REST_POS)
-#define AMMO_DX_REST_POS             POT_TO_AMMO_POS(POT_DX_REST_POS)
-// #define MV_TO_POT_POS(v)             ((62.7126571336371f) - (0.0149283343200212f * (v)) - (1.29019872658103e-07f * (v) * (v)))
-// #define POT_POS_TO_MV(pos)           ((61911.4031572796f) * sqrtf(1.0f - 0.00202209752294489f*pos) - 57852.8486056587f)
-
-#define CANLIB_PACK_AND_SEND(msg_name, MSG_NAME, ntw, NTW)                   \
-    can_mgr_msg_t msg_to_be_sent = {0};                                      \
-    msg_to_be_sent.id            = NTW##_##MSG_NAME##_FRAME_ID;              \
-    msg_to_be_sent.size          = NTW##_##MSG_NAME##_BYTE_SIZE;             \
-    ntw##_##msg_name##_t raw     = {0};                                      \
-    ntw##_##msg_name##_conversion_to_raw_struct(&raw, &converted);           \
-    ntw##_##msg_name##_pack(msg_to_be_sent.data, &raw, msg_to_be_sent.size); \
-    if (can_mgr_send(acquisinatore_can_id, &msg_to_be_sent) < 0) {           \
-        acquisinatore_set_led_code(acquisinatore_led_code_can_not_working);  \
-    }
 
 #endif

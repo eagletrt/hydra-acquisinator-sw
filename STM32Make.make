@@ -259,7 +259,7 @@ CXXFLAGS += $(ASSEMBLER_LIST_OUTPUT_FLAG)
 # LDFLAGS
 #######################################
 # link script
-LDSCRIPT = STM32F334K8Ux_FLASH_shifted.ld
+LDSCRIPT = STM32F334K8Ux_FLASH.ld
 
 # libraries
 LIBS = -lc -lm -lnosys 

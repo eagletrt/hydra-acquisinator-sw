@@ -45,6 +45,7 @@ void MX_SPI1_Init(void);
 /* USER CODE BEGIN Prototypes */
 
 float ltc1865_read(ltc1865_channel_t channel);
+int ltc1865_transfer(ltc1865_channel_t next_channel, uint16_t *code);
 
 /* USER CODE END Prototypes */
 

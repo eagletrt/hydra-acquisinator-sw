@@ -22,6 +22,15 @@
 
 /* USER CODE BEGIN 0 */
 
+#include "acquisinator_config.h"
+
+// TIM2 runs from APB1 x2 = 72 MHz (APB1 = 36 MHz, the same clock the 1 Mbit/s CAN timing assumes)
+#define TIM2_CLOCK_HZ (72000000U)
+
+#if TIM2_CLOCK_HZ % ACQUISINATORE_ADC_SAMPLE_RATE != 0U
+#error "ACQUISINATORE_ADC_SAMPLE_RATE must divide the TIM2 clock, or the sampling period is not exact"
+#endif
+
 void wait_5us(void) {
     HAL_TIM_OC_Start(&htim2, TIM_CHANNEL_1);
 }
@@ -79,7 +88,12 @@ void MX_TIM2_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN TIM2_Init 2 */
-
+    // ADC sampling tick: the counter runs at the full timer clock (TIM2 is 32 bit), so the update
+    // rate is exact for any ACQUISINATORE_ADC_SAMPLE_RATE that divides it
+    __HAL_TIM_SET_PRESCALER(&htim2, 0U);
+    __HAL_TIM_SET_AUTORELOAD(&htim2, TIM2_CLOCK_HZ / ACQUISINATORE_ADC_SAMPLE_RATE - 1U);
+    htim2.Instance->EGR = TIM_EGR_UG;  // load the new prescaler now
+    __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
   /* USER CODE END TIM2_Init 2 */
 
 }

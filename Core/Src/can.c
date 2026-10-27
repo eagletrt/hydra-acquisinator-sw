@@ -23,158 +23,27 @@
 /* USER CODE BEGIN 0 */
 
 #include "acquisinator_config.h"
-#include "acquisinatore.h"
 #include "can_manager.h"
 #include "error_codes.h"
 
+#include <string.h>
+
 int acquisinatore_can_id;
-extern uint32_t acquisinator_id_from_flash;
 
-can_mgr_msg_t can_messages_states[N_MONITORED_MESSAGES];
-uint8_t can_messages_is_new[N_MONITORED_MESSAGES];
-
+// nothing is received (no filter is configured), required by can_manager
 int can_mgr_from_id_to_index(int can_id, int msg_id) {
-    if (can_id != acquisinatore_can_id)
-        return -1;
-    switch (msg_id) {
-        case SECONDARY_ACQUISINATOR_JMP_TO_BLT_FRAME_ID:
-            return ACQUISINATOR_SECONDARY_ACQUISINATOR_JMP_TO_BLT;
-        case SECONDARY_LINK_DEFORMATION_SET_CALIBRATION_FRAME_ID:
-            return ACQUISINATOR_SECONDARY_LINK_DEFORMATION_SET_CALIBRATION;
-        case SECONDARY_AMMO_COMPRESSION_SET_CALIBRATION_FRAME_ID:
-            return ACQUISINATOR_SECONDARY_AMMO_POS_SET_CALIBRATION;
-        default:
-            return -1;
-    }
     return -1;
 }
 
-int secondary_acquisinator_jmp_to_blt_handler(can_mgr_msg_t *msg) {
-    secondary_acquisinator_jmp_to_blt_t jmp_raw;
-    secondary_acquisinator_jmp_to_blt_converted_t jmp_converted;
-    secondary_acquisinator_jmp_to_blt_unpack(&jmp_raw, msg->data, SECONDARY_ACQUISINATOR_JMP_TO_BLT_BYTE_SIZE);
-    secondary_acquisinator_jmp_to_blt_raw_to_conversion_struct(&jmp_converted, &jmp_raw);
-    if (jmp_converted.acquisinatore_id == acquisinator_id_from_flash) {
-        system_reset();
+// frame format in Tools/acquisinator_hydra_adc.dbc (little endian, like the MCU)
+void acquisinatore_send_adc(float voltage_mV, uint16_t adc_raw, uint16_t adc_filtered) {
+    can_mgr_msg_t msg = {.id = ACQUISINATORE_ADC_CAN_ID, .size = 8};
+    memcpy(&msg.data[0], &voltage_mV, sizeof(float));
+    memcpy(&msg.data[4], &adc_raw, sizeof(uint16_t));
+    memcpy(&msg.data[6], &adc_filtered, sizeof(uint16_t));
+    if (can_mgr_send(acquisinatore_can_id, &msg) < 0) {
+        acquisinatore_set_led_code(acquisinatore_led_code_can_not_working);
     }
-    return 0;
-}
-
-extern bool calibration_ammo_pos_flag;
-extern bool calibration_reset_link_deformation_flag;
-
-int secondary_ammo_pos_set_calibration_handler(can_mgr_msg_t *msg) {
-    calibration_ammo_pos_flag = true;
-    return 0;
-}
-
-int secondary_link_deformation_set_calibration_handler(can_mgr_msg_t *msg) {
-    calibration_reset_link_deformation_flag = true;
-    return 0;
-}
-
-int (*primary_message_handlers[N_MONITORED_MESSAGES])(can_mgr_msg_t *) = CAN_MESSAGES_HANDLERS;
-
-void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
-    can_mgr_it_callback(hcan, CAN_RX_FIFO0, NULL);
-}
-
-void acquisinatore_send_water_cooling_temp(double radiator_input, double radiator_output) {
-    secondary_cooling_temp_pumps_converted_t converted = {.input = radiator_input, .output = radiator_output};
-    CANLIB_PACK_AND_SEND(cooling_temp_pumps, COOLING_TEMP_PUMPS, secondary, SECONDARY);
-}
-
-void acquisinatore_send_air_cooling_temp(double air_temperature) {
-    secondary_cooling_temp_radiators_converted_t converted = {.air_temp = air_temperature};
-    CANLIB_PACK_AND_SEND(cooling_temp_radiators, COOLING_TEMP_RADIATORS, secondary, SECONDARY);
-}
-
-void acquisinatore_send_strain_gauge_val_fl_wheel(secondary_link_deformation_fl_wheel_rod_id rod_id, float strain_gauge_val) {
-    secondary_link_deformation_fl_wheel_converted_t converted = {.rod_id = rod_id, .deformation = strain_gauge_val};
-    CANLIB_PACK_AND_SEND(link_deformation_fl_wheel, LINK_DEFORMATION_FL_WHEEL, secondary, SECONDARY);
-}
-
-void acquisinatore_send_strain_gauge_val_fr_wheel(secondary_link_deformation_fr_wheel_rod_id rod_id, float strain_gauge_val) {
-    secondary_link_deformation_fr_wheel_converted_t converted = {.rod_id = rod_id, .deformation = strain_gauge_val};
-    CANLIB_PACK_AND_SEND(link_deformation_fr_wheel, LINK_DEFORMATION_FR_WHEEL, secondary, SECONDARY);
-}
-
-void acquisinatore_send_strain_gauge_val_rl_wheel(secondary_link_deformation_rl_wheel_rod_id rod_id, float strain_gauge_val) {
-    secondary_link_deformation_rl_wheel_converted_t converted = {.rod_id = rod_id, .deformation = strain_gauge_val};
-    CANLIB_PACK_AND_SEND(link_deformation_rl_wheel, LINK_DEFORMATION_RL_WHEEL, secondary, SECONDARY);
-}
-
-void acquisinatore_send_strain_gauge_val_rr_wheel(secondary_link_deformation_rr_wheel_rod_id rod_id, float strain_gauge_val) {
-    secondary_link_deformation_rr_wheel_converted_t converted = {.rod_id = rod_id, .deformation = strain_gauge_val};
-    CANLIB_PACK_AND_SEND(link_deformation_rr_wheel, LINK_DEFORMATION_RR_WHEEL, secondary, SECONDARY);
-}
-
-void acquisinatore_send_calibration_offsets(float off1, float off2) {
-    secondary_acquisinator_calibrations_offsets_converted_t converted = {
-        .acquisinator_id = acquisinator_id_from_flash, .offset1 = off1, .offset2 = off2};
-    CANLIB_PACK_AND_SEND(acquisinator_calibrations_offsets, ACQUISINATOR_CALIBRATIONS_OFFSETS, secondary, SECONDARY);
-}
-
-void acquisinatore_send_debug_5_values(float v1, float v2, float v3) {
-    secondary_debug_signal_5_converted_t converted = {
-        .device_id = secondary_debug_signal_5_device_id_acquisinator, .field_1 = v1, .field_2 = v2, .field_3 = v3};
-    CANLIB_PACK_AND_SEND(debug_signal_5, DEBUG_SIGNAL_5, secondary, SECONDARY);
-}
-
-void acquisinatore_send_debug_6_values(float v1, float v2, float v3) {
-    secondary_debug_signal_6_converted_t converted = {
-        .device_id = secondary_debug_signal_6_device_id_acquisinator, .field_1 = v1, .field_2 = v2, .field_3 = v3};
-    CANLIB_PACK_AND_SEND(debug_signal_6, DEBUG_SIGNAL_6, secondary, SECONDARY);
-}
-
-void acquisinatore_send_debug_7_values(float v1, float v2, float v3) {
-    secondary_debug_signal_7_converted_t converted = {
-        .device_id = secondary_debug_signal_7_device_id_acquisinator, .field_1 = v1, .field_2 = v2, .field_3 = v3};
-    CANLIB_PACK_AND_SEND(debug_signal_7, DEBUG_SIGNAL_7, secondary, SECONDARY);
-}
-
-void acquisinatore_send_debug_8_values(float v1, float v2, float v3) {
-    secondary_debug_signal_8_converted_t converted = {
-        .device_id = secondary_debug_signal_8_device_id_acquisinator, .field_1 = v1, .field_2 = v2, .field_3 = v3};
-    CANLIB_PACK_AND_SEND(debug_signal_8, DEBUG_SIGNAL_8, secondary, SECONDARY);
-}
-
-void acquisinatore_send_version(void) {
-    secondary_acquisinator_version_converted_t converted = {
-        .acquisinator_id = acquisinator_id_from_flash, .canlib_build_time = CANLIB_BUILD_TIME};
-    CANLIB_PACK_AND_SEND(acquisinator_version, ACQUISINATOR_VERSION, secondary, SECONDARY);
-}
-
-void acquisinatore_send_errors(void) {
-    extern uint32_t all_set_errors[acquisinatore_led_code_n_values];
-    secondary_acquisinator_errors_converted_t converted = {
-        .acquisinator_id                                            = acquisinator_id_from_flash,
-        .acquisinator_errors_acquisinatore_led_code_can_not_working = all_set_errors[acquisinatore_led_code_can_not_working],
-        .acquisinator_errors_acquisinatore_led_code_flashed_firmware_with_wrong_id =
-            all_set_errors[acquisinatore_led_code_flashed_firmware_with_wrong_id],
-        .acquisinator_errors_acquisinatore_led_code_read_write_flash = all_set_errors[acquisinatore_led_code_read_write_flash],
-        .acquisinator_errors_acquisinatore_led_code_spi_error        = all_set_errors[acquisinatore_led_code_spi_error]};
-    CANLIB_PACK_AND_SEND(acquisinator_errors, ACQUISINATOR_ERRORS, secondary, SECONDARY);
-}
-
-void acquisinatore_rear_send_ammo_pos(float rl, float rr) {
-    secondary_rear_ammo_compression_converted_t converted = {.rl = rl, .rr = rr};
-    CANLIB_PACK_AND_SEND(rear_ammo_compression, REAR_AMMO_COMPRESSION, secondary, SECONDARY);
-}
-
-void acquisinatore_front_send_ammo_pos(float fl, float fr) {
-    secondary_front_ammo_compression_converted_t converted = {.fl = fl, .fr = fr};
-    CANLIB_PACK_AND_SEND(front_ammo_compression, FRONT_AMMO_COMPRESSION, secondary, SECONDARY);
-}
-
-int can_routine(void) {
-    for (size_t msg_idx = 0; msg_idx < N_MONITORED_MESSAGES; ++msg_idx) {
-        if (can_messages_is_new[msg_idx] && (primary_message_handlers[msg_idx] != NULL)) {
-            can_messages_is_new[msg_idx] = 0;
-            (*primary_message_handlers[msg_idx])(&can_messages_states[msg_idx]);
-        }
-    }
-    return 0;
 }
 
 /* USER CODE END 0 */
@@ -209,60 +78,12 @@ void MX_CAN_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN_Init 2 */
-    CAN_FilterTypeDef primary_filter = {
-        .FilterMode           = CAN_FILTERMODE_IDMASK,
-        .FilterIdLow          = 0 << 5,                 // Take all ids from 0
-        .FilterIdHigh         = ((1U << 11) - 1) << 5,  // to 2^11 - 1
-        .FilterMaskIdHigh     = 0 << 5,                 // Don't care on can id bits
-        .FilterMaskIdLow      = 0 << 5,                 // Don't care on can id bits
-        .FilterFIFOAssignment = CAN_FILTER_FIFO0,
-        .FilterBank           = 0,
-        .FilterScale          = CAN_FILTERSCALE_16BIT,
-        .FilterActivation     = ENABLE,
-        .SlaveStartFilterBank = 0};
+    // transmit only: no filter, no rx interrupt
     acquisinatore_can_id = can_mgr_init(&hcan);
-    if (acquisinatore_can_id < 0) {
-        Error_Handler();
-        HAL_GPIO_WritePin(USER_LED_GPIO_Port, USER_LED_Pin, GPIO_PIN_SET);
-    }
-    if (can_mgr_config(
-            acquisinatore_can_id,
-            &primary_filter,
-            CAN_IT_RX_FIFO0_MSG_PENDING,
-            CAN_RX_FIFO0,
-            can_messages_states,
-            can_messages_is_new,
-            N_MONITORED_MESSAGES) < 0) {
-        Error_Handler();
-        HAL_GPIO_WritePin(USER_LED_GPIO_Port, USER_LED_Pin, GPIO_PIN_SET);
-    }
-
-    if (can_mgr_start(acquisinatore_can_id) < 0) {
-        Error_Handler();
-        HAL_GPIO_WritePin(USER_LED_GPIO_Port, USER_LED_Pin, GPIO_PIN_SET);
-    }
-
-#if 0
-    // Old configuration only sending messages
-    CAN_FilterTypeDef hfilter = {.FilterActivation = CAN_FILTER_ENABLE,
-                               .FilterBank = 0,
-                               .FilterFIFOAssignment = CAN_FILTER_FIFO0,
-                               .FilterIdHigh = ((1U << 11) - 1) << 5, // Take all ids to 2^11 - 1 
-                               .FilterIdLow = 0,     // Take all ids from 0 .FilterMaskIdHigh = 0,
-                               .FilterMaskIdLow = 0,
-                               .FilterMode = CAN_FILTERMODE_IDMASK,
-                               .FilterScale = CAN_FILTERSCALE_16BIT};
-
-    acquisinatore_can_id = can_mgr_init(&hcan);
-    if (can_mgr_config(acquisinatore_can_id, NULL, 0, CAN_RX_FIFO0, NULL, NULL, 0) < 0) {
-        HAL_GPIO_WritePin(USER_LED_GPIO_Port, USER_LED_Pin, GPIO_PIN_SET);
+    if (acquisinatore_can_id < 0 || can_mgr_config(acquisinatore_can_id, NULL, 0, CAN_RX_FIFO0, NULL, NULL, 0) < 0 ||
+        can_mgr_start(acquisinatore_can_id) < 0) {
         Error_Handler();
     }
-    if (can_mgr_start(acquisinatore_can_id) < 0) {
-        HAL_GPIO_WritePin(USER_LED_GPIO_Port, USER_LED_Pin, GPIO_PIN_SET);
-    }
-#endif
-
   /* USER CODE END CAN_Init 2 */
 
 }

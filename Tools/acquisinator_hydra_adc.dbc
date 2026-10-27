@@ -1,0 +1,17 @@
+VERSION ""
+
+NS_ :
+
+BS_:
+
+BU_: Acquisinator
+
+BO_ 1968 ACQUISINATOR_HYDRA_ADC: 8 Acquisinator
+ SG_ voltage : 0|32@1- (1,0) [0|3290] "mV" Vector__XXX
+ SG_ adc_raw : 32|16@1+ (1,0) [0|65535] "code" Vector__XXX
+ SG_ adc_filtered : 48|16@1+ (1,0) [0|65535] "code" Vector__XXX
+
+CM_ SG_ 1968 voltage "Tensione sul canale dell'estensimetro (uscita amplificatore), da adc_filtered: 3290 mV * media / 65536";
+CM_ SG_ 1968 adc_raw "Ultimo campione dell'LTC1865 (canale SE_CH2), non filtrato; campionamento a 1.5 kHz da timer, frame a ACQUISINATORE_ADC_SEND_RATE";
+CM_ SG_ 1968 adc_filtered "Campioni a 1.5 kHz filtrati dal firmware (ACQUISINATORE_ADC_FILTER: media su 20 ms, oppure notch 50/100/150 Hz + passa basso a SEND_RATE/4), arrotondati; voltage ha il valore non arrotondato";
+SIG_VALTYPE_ 1968 voltage : 1;

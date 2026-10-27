@@ -1,0 +1,27 @@
+VERSION ""
+
+
+NS_ :
+
+BS_:
+
+BU_: Acquisinator
+
+
+BO_ 1952 ACQUISINATOR_DIAG: 8 Acquisinator
+ SG_ lockin_out : 0|32@1+ (1,0) [0|0] "V" Vector__XXX
+ SG_ adc_raw : 32|16@1+ (1,0) [0|65535] "code" Vector__XXX
+ SG_ adc_poll : 48|8@1+ (1,0) [0|255] "status" Vector__XXX
+
+BO_ 1953 ACQUISINATOR_BRIDGE: 8 Acquisinator
+ SG_ resistance : 0|32@1+ (1,0) [0|0] "ohm" Vector__XXX
+ SG_ phase : 32|16@1- (0.01,0) [-180|180] "deg" Vector__XXX
+ SG_ flags : 48|8@1+ (1,0) [0|255] "" Vector__XXX
+ SG_ seq : 56|8@1+ (1,0) [0|255] "" Vector__XXX
+
+CM_ SG_ 1952 lockin_out "Componente in fase all'uscita dell'amplificatore, ampiezza di picco con segno";
+CM_ SG_ 1952 adc_raw "Media dell'uscita dell'amplificatore sulla finestra";
+CM_ SG_ 1953 flags "bit0 saturazione bassa, bit1 saturazione alta, bit2 errore SPI, bit3 non calibrato, bit4 nessuna misura (resistance = NaN)";
+
+SIG_VALTYPE_ 1952 lockin_out : 1;
+SIG_VALTYPE_ 1953 resistance : 1;

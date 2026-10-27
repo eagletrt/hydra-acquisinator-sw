@@ -38,28 +38,23 @@ int acquisinatore_completed_loop[LTC1865_N_CHANNELS];
 
 void wait_5us(void);
 
-int ltc1865_select_channel(ltc1865_channel_t c) {
-    uint8_t channel_selection_bits[2] = {0x00};
+// both bytes shifted into SDI select the channel of the next conversion
+static uint8_t ltc1865_channel_selection_bits(ltc1865_channel_t c) {
     switch (c) {
         case ltc1865_SE_CH1:
-            channel_selection_bits[0] = 0xFF;
-            channel_selection_bits[1] = 0xFF;
-            break;
+            return 0xFF;
         case ltc1865_SE_CH2:
-            channel_selection_bits[0] = 0xAA;
-            channel_selection_bits[1] = 0xAA;
-            break;
-        case ltc1865_DIFF:
-            channel_selection_bits[0] = 0x00;
-            channel_selection_bits[1] = 0x00;
-            break;
+            return 0xAA;
         case ltc1865_DIFF_INVERTED:
-            channel_selection_bits[0] = 0x55;
-            channel_selection_bits[1] = 0x55;
-            break;
+            return 0x55;
+        case ltc1865_DIFF:
         default:
-            break;
+            return 0x00;
     }
+}
+
+int ltc1865_select_channel(ltc1865_channel_t c) {
+    uint8_t channel_selection_bits[2] = {ltc1865_channel_selection_bits(c), ltc1865_channel_selection_bits(c)};
     HAL_GPIO_WritePin(GPIOA, SPI_CS_Pin, GPIO_PIN_SET);
     // wait_5us();
     HAL_Delay(1);
@@ -123,6 +118,58 @@ float ltc1865_read(ltc1865_channel_t channel) {
     ltc1865_raw_filtered_values[channel] = current_filtered_value;
     ltc1865_values_in_V[channel]         = (ACQUISINATORE_VREF_INT * ((float)ltc1865_raw_filtered_values[channel])) / 65536.0f;
     return ltc1865_values_in_V[channel];
+}
+
+#define LTC1865_SPI_TIMEOUT_LOOPS (3000U)  // ~250 us at 72 MHz: a byte takes ~28 us at 281 kHz, the sampling period is 667 us
+
+// Exchanges one byte by polling the registers: safe inside an interrupt, where HAL_GetTick() does
+// not advance and the timeouts of the HAL blocking functions would never expire.
+static int ltc1865_spi_byte(uint8_t tx, uint8_t *rx) {
+    uint32_t loops = 0;
+    while ((SPI1->SR & SPI_SR_TXE) == 0U) {
+        if (++loops > LTC1865_SPI_TIMEOUT_LOOPS) {
+            return -1;
+        }
+    }
+    *(__IO uint8_t *)&SPI1->DR = tx;  // 8 bit access: a 16 bit write would push two bytes
+    loops = 0;
+    while ((SPI1->SR & SPI_SR_RXNE) == 0U) {
+        if (++loops > LTC1865_SPI_TIMEOUT_LOOPS) {
+            return -1;
+        }
+    }
+    *rx = *(__IO uint8_t *)&SPI1->DR;
+    return 0;
+}
+
+/**
+ * One LTC1865 transaction, without any wait: meant to be called at a fixed rate (TIM2).
+ * CS low reads the conversion started by the previous CS rising edge and shifts in the channel of
+ * the next one; CS is left high, so the next conversion starts now and has a whole period to end.
+ * Returns 0 and the code, or -1 on SPI timeout (the code is then not valid).
+ */
+int ltc1865_transfer(ltc1865_channel_t next_channel, uint16_t *code) {
+    uint8_t config = ltc1865_channel_selection_bits(next_channel);
+    uint8_t msb = 0, lsb = 0;
+
+    SET_BIT(SPI1->CR2, SPI_CR2_FRXTH);  // RXNE on every byte (the HAL changes it in its transfers)
+    __HAL_SPI_ENABLE(&hspi1);
+    while ((SPI1->SR & SPI_SR_FRLVL) != 0U) {
+        (void)*(__IO uint8_t *)&SPI1->DR;  // drop bytes left in the RX FIFO
+    }
+
+    HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_RESET);
+    int res = ltc1865_spi_byte(config, &msb);
+    if (res == 0) {
+        res = ltc1865_spi_byte(config, &lsb);
+    }
+    uint32_t loops = 0;
+    while ((SPI1->SR & SPI_SR_BSY) != 0U && ++loops <= LTC1865_SPI_TIMEOUT_LOOPS) {
+    }
+    HAL_GPIO_WritePin(SPI_CS_GPIO_Port, SPI_CS_Pin, GPIO_PIN_SET);  // starts the next conversion
+
+    *code = (uint16_t)((msb << 8) | lsb);
+    return res;
 }
 
 /* USER CODE END 0 */

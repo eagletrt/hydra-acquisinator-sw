@@ -31,8 +31,6 @@
 #include "error_codes.h"
 #include "math.h"
 
-#include <stdbool.h>
-
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -62,83 +60,31 @@
 
 /* USER CODE BEGIN PV */
 
+// written by the TIM2 interrupt (acquisinatore_adc_tick), read by the main loop
+typedef struct {
+    float filtered;  // filtered value, in ADC codes (not rounded)
+    uint16_t last;   // last single code
+} acquisinatore_adc_snapshot_t;
+
+static volatile acquisinatore_adc_snapshot_t adc_snapshot;
+static volatile uint8_t adc_snapshot_ready = 0;
+static volatile uint32_t adc_spi_errors    = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 
-extern uint32_t last_set_error;
-
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-bool calibration_ammo_pos_flag               = false;
-bool calibration_reset_link_deformation_flag = false;
-uint32_t acquisinator_id_from_flash          = ACQUISINATOR_ID;
-
-#define POT_REST_POS_IDX_DX 0
-#define POT_REST_POS_IDX_SX 1
-float pot_rest_pos[2] = {DEF_POT_DX_REST_POS, DEF_POT_SX_REST_POS};
-// float c_ammo_pos_dx   = 0.0f;
-// float c_ammo_pos_sx   = 0.0f;
-
-// TODO: include the crash debug stuff so that we can debug strange stuff remotely
-#define CHECK_HAL_RES(res) \
-    if (res != HAL_OK) {   \
-        return res;        \
-    }
-
-HAL_StatusTypeDef save_configs_to_flash(float data1, float data2, uint32_t acquisinatore_version) {
-    HAL_StatusTypeDef res = HAL_FLASH_Unlock();
-    CHECK_HAL_RES(res);
-
-    FLASH_EraseInitTypeDef erase_init = {
-        .TypeErase = FLASH_TYPEERASE_PAGES, .PageAddress = ACQUISINATOR_CONFIG_RESERVED_ADDRESS, .NbPages = 1};
-    uint32_t mem_error = 0;
-    res                = HAL_FLASHEx_Erase(&erase_init, &mem_error);
-    CHECK_HAL_RES(res);
-
-    union {
-        uint32_t d;
-        float f;
-    } flash_config_union = {.f = data1};
-
-    res = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, ACQUISINATOR_CONFIG_RESERVED_ADDRESS, flash_config_union.d);
-    CHECK_HAL_RES(res);
-
-    flash_config_union.f = data2;
-    res = HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, ACQUISINATOR_CONFIG_RESERVED_ADDRESS + sizeof(data1), flash_config_union.d);
-    CHECK_HAL_RES(res);
-
-    res = HAL_FLASH_Program(
-        FLASH_TYPEPROGRAM_WORD, ACQUISINATOR_CONFIG_RESERVED_ADDRESS + sizeof(data1) + sizeof(data2), acquisinatore_version);
-    CHECK_HAL_RES(res);
-
-    res = HAL_FLASH_Lock();
-    CHECK_HAL_RES(res);
-    return HAL_OK;
-}
-
 float read_float_from_flash(float *address) {
     if (address == NULL)
         return 0.0f;
     return *address;
-}
-
-uint32_t read_uint32_from_flash(uint32_t *address) {
-    if (address == NULL)
-        return 0U;
-    return *address;
-}
-
-float acquisinatore_ntc_from_V_to_degrees_celsius(float value_in_V) {
-    return (
-        144.753928685635f + (-441.361483066664f * value_in_V) + (808.342944901787f * powf(value_in_V, 2.0f)) +
-        (-831.830860786940f * powf(value_in_V, 3.0f)) + (425.004221588082f * powf(value_in_V, 4.0f)) +
-        (-84.5939048598991f * powf(value_in_V, 5.0f)));
 }
 
 float acquisinatore_link_deformation_from_V_to_elongation(float value_in_V) {
@@ -160,222 +106,127 @@ void acquisinatore_turn_led(int on) {
 }
 
 uint32_t get_timestamp_ms(void) {
-    return HAL_GetTick();  //+ ACQUISINATOR_ID;
+    return HAL_GetTick();
 }
 
 void system_reset(void) {
     HAL_NVIC_SystemReset();
 }
 
-// This assumes that o2 is always the offset for strain gauge
-HAL_StatusTypeDef link_deformation_calibration_check(float ch, float *o1, float *o2) {
-    if (calibration_reset_link_deformation_flag) {
-        calibration_reset_link_deformation_flag = false;
-        *o2                                     = LINK_DEFORMATION_CALIBRATION_VALUE - ch;
-        return save_configs_to_flash(*o1, *o2, acquisinator_id_from_flash);
+#if ACQUISINATORE_ADC_FILTER == ACQUISINATORE_ADC_FILTER_AVG_20MS
+
+// moving average over one mains period; returns 0 until the window is full
+static int acquisinatore_adc_filter(uint16_t code, float *out) {
+    static uint16_t window[ACQUISINATORE_ADC_AVG_SAMPLES];
+    static uint32_t sum    = 0;
+    static uint32_t idx    = 0;
+    static uint32_t filled = 0;
+
+    sum += code;
+    sum -= window[idx];
+    window[idx] = code;
+    idx         = (idx + 1U) % ACQUISINATORE_ADC_AVG_SAMPLES;
+    if (filled < ACQUISINATORE_ADC_AVG_SAMPLES) {
+        filled++;
+        return 0;
     }
-    return HAL_OK;
+    *out = (float)sum / (float)ACQUISINATORE_ADC_AVG_SAMPLES;
+    return 1;
 }
 
-HAL_StatusTypeDef ammo_compression_calibration_check(float c_ammo_pos_dx, float c_ammo_pos_sx, float *o1, float *o2) {
-    if (calibration_ammo_pos_flag) {
-        calibration_ammo_pos_flag = false;
-        *o1                       = -c_ammo_pos_dx;
-        *o2                       = -c_ammo_pos_sx;
-        return save_configs_to_flash(*o1, *o2, acquisinator_id_from_flash);
-    }
-    return HAL_OK;
+#elif ACQUISINATORE_ADC_FILTER == ACQUISINATORE_ADC_FILTER_NOTCH_LP
+
+// biquad in direct form II transposed, coefficients from the RBJ audio EQ cookbook (a0 = 1)
+typedef struct {
+    float b0, b1, b2, a1, a2;
+    float z1, z2;
+} biquad_t;
+
+#define ADC_N_BIQUADS (5U)  // notch 50, 100, 150 Hz + two sections of the 4th order low-pass
+static biquad_t adc_biquads[ADC_N_BIQUADS];
+
+static void biquad_set(biquad_t *f, float b0, float b1, float b2, float a0, float a1, float a2) {
+    f->b0 = b0 / a0;
+    f->b1 = b1 / a0;
+    f->b2 = b2 / a0;
+    f->a1 = a1 / a0;
+    f->a2 = a2 / a0;
 }
 
-float link_deformation_routine(float ch1, float ch2, float *o1, float *o2, uint32_t *pts) {
-    float link_deformation = acquisinatore_link_deformation_from_V_to_elongation(ch2 + *o2);
-    if (link_deformation_calibration_check(ch2, o1, o2) != HAL_OK) {
-        acquisinatore_set_led_code(acquisinatore_led_code_read_write_flash);
-    }
-#if ACQUISINATORE_SEND_CALIBRATIONS_OFFSETS
-    static uint32_t calibration_values_last_send = 0;
-    if ((get_timestamp_ms() + acquisinator_id_from_flash - calibration_values_last_send) >
-        SECONDARY_ACQUISINATOR_CALIBRATIONS_OFFSETS_CYCLE_TIME_MS) {
-        calibration_values_last_send = get_timestamp_ms();
-        acquisinatore_send_calibration_offsets(*o1, *o2);
-    }
-#endif
-    return link_deformation;
+static void biquad_notch(biquad_t *f, float f0, float q) {
+    float w = 2.0f * (float)M_PI * f0 / (float)ACQUISINATORE_ADC_SAMPLE_RATE;
+    float alpha = sinf(w) / (2.0f * q), c = cosf(w);
+    biquad_set(f, 1.0f, -2.0f * c, 1.0f, 1.0f + alpha, -2.0f * c, 1.0f - alpha);
 }
 
-#if ACQUISINATOR_ID == ACQUISINATOR_ID_5
-
-// rear ammos
-void acquisinator_task(float ch1, float ch2, float *o1, float *o2, uint32_t *pts) {
-    static uint32_t last_send = 0;
-    ch2 -= OFFSET_FOR_SECOND_CHANNEL_mV;
-
-    float pot_pos_dx    = FROM_MILLIVOLT_TO_POT_POS(ch1 * 1000.0f);
-    float pot_pos_sx    = FROM_MILLIVOLT_TO_POT_POS(ch2 * 1000.0f);
-    float c_ammo_pos_dx = POT_TO_AMMO_POS(pot_pos_dx) * (-1.0f) + *o1;
-    float c_ammo_pos_sx = POT_TO_AMMO_POS(pot_pos_sx) * (-1.0f) + *o2;
-
-    if (ammo_compression_calibration_check(c_ammo_pos_dx, c_ammo_pos_sx, o1, o2) != HAL_OK) {
-        // TODO: handle errors
-    }
-
-    if (get_timestamp_ms() - last_send > ACQUISINATORE_AMMO_POSITION_DELAY_MS) {
-        last_send = get_timestamp_ms();
-        acquisinatore_send_debug_7_values(ch1 / 10.0f, ch2 / 10.0f, 0.0f);
-        acquisinatore_rear_send_ammo_pos(c_ammo_pos_sx, c_ammo_pos_dx);
-    }
+static void biquad_lowpass(biquad_t *f, float fc, float q) {
+    float w = 2.0f * (float)M_PI * fc / (float)ACQUISINATORE_ADC_SAMPLE_RATE;
+    float alpha = sinf(w) / (2.0f * q), c = cosf(w);
+    biquad_set(f, (1.0f - c) / 2.0f, 1.0f - c, (1.0f - c) / 2.0f, 1.0f + alpha, -2.0f * c, 1.0f - alpha);
 }
 
-#elif ACQUISINATOR_ID == ACQUISINATOR_ID_8
-
-// front ammos
-void acquisinator_task(float ch1, float ch2, float *o1, float *o2, uint32_t *pts) {
-    static uint32_t last_send = 0;
-    ch2 -= OFFSET_FOR_SECOND_CHANNEL_mV;
-
-    float pot_pos_dx    = FROM_MILLIVOLT_TO_POT_POS(ch1 * 1000.0f);
-    float pot_pos_sx    = FROM_MILLIVOLT_TO_POT_POS(ch2 * 1000.0f);
-    float c_ammo_pos_dx = POT_TO_AMMO_POS(pot_pos_dx) * (-1.0f) + *o1;
-    float c_ammo_pos_sx = POT_TO_AMMO_POS(pot_pos_sx) * (-1.0f) + *o2;
-
-    if (ammo_compression_calibration_check(c_ammo_pos_dx, c_ammo_pos_sx, o1, o2) != HAL_OK) {
-        // TODO: handle errors
-    }
-    if (get_timestamp_ms() - last_send > ACQUISINATORE_AMMO_POSITION_DELAY_MS) {
-        last_send = get_timestamp_ms();
-        acquisinatore_send_debug_6_values(ch1 / 10.0f, ch2 / 10.0f, 0.0f);
-        acquisinatore_front_send_ammo_pos(c_ammo_pos_sx, c_ammo_pos_dx);
-    }
+static void acquisinatore_adc_filter_init(void) {
+    biquad_notch(&adc_biquads[0], 50.0f, ACQUISINATORE_ADC_NOTCH_Q);
+    biquad_notch(&adc_biquads[1], 100.0f, ACQUISINATORE_ADC_NOTCH_Q);
+    biquad_notch(&adc_biquads[2], 150.0f, ACQUISINATORE_ADC_NOTCH_Q);
+    // Butterworth 4th order = two 2nd order sections with these Q
+    biquad_lowpass(&adc_biquads[3], ACQUISINATORE_ADC_LP_CUTOFF_HZ, 0.5412f);
+    biquad_lowpass(&adc_biquads[4], ACQUISINATORE_ADC_LP_CUTOFF_HZ, 1.3066f);
 }
 
-#elif ACQUISINATOR_ID == ACQUISINATOR_ID_9
-
-void acquisinator_task(float ch1, float ch2, float *o1, float *o2, uint32_t *pts) {
-    float link_deformation                     = link_deformation_routine(ch1, ch2, o1, o2, pts);
-    static uint32_t last_link_deformation_sent = 0;
-    if ((get_timestamp_ms() - last_link_deformation_sent) > ACQUISINATORE_LINK_DEFORMATION_DELAY_MS) {
-        last_link_deformation_sent = get_timestamp_ms();
-        acquisinatore_send_strain_gauge_val_rr_wheel(link_deformation, secondary_link_deformation_rr_wheel_rod_id_F1011);
+// notch chain + low-pass; the state starts at steady state on the first code (no start transient)
+static int acquisinatore_adc_filter(uint16_t code, float *out) {
+    static uint8_t primed = 0;
+    float x = (float)code;
+    for (uint32_t i = 0; i < ADC_N_BIQUADS; i++) {
+        biquad_t *f = &adc_biquads[i];
+        if (!primed) {
+            // every section has unity DC gain: output = input, states as for a constant input
+            f->z2 = f->b2 * x - f->a2 * x;
+            f->z1 = f->b1 * x - f->a1 * x + f->z2;
+        }
+        float y = f->b0 * x + f->z1;
+        f->z1   = f->b1 * x - f->a1 * y + f->z2;
+        f->z2   = f->b2 * x - f->a2 * y;
+        x       = y;
     }
-}
-
-#elif ACQUISINATOR_ID == REAR_RIGHT_WHEEL_F36
-
-void acquisinator_task(float ch1, float ch2, float *o1, float *o2, uint32_t *pts) {
-    float link_deformation                     = link_deformation_routine(ch1, ch2, o1, o2, pts);
-    static uint32_t last_link_deformation_sent = 0;
-    if ((get_timestamp_ms() - last_link_deformation_sent) > ACQUISINATORE_LINK_DEFORMATION_DELAY_MS) {
-        last_link_deformation_sent = get_timestamp_ms();
-        acquisinatore_send_strain_gauge_val_rr_wheel(link_deformation, secondary_link_deformation_rr_wheel_rod_id_F36);
-    }
-}
-
-#elif ACQUISINATOR_ID == REAR_RIGHT_WHEEL_F46
-
-void acquisinator_task(float ch1, float ch2, float *o1, float *o2, uint32_t *pts) {
-    float link_deformation                     = link_deformation_routine(ch1, ch2, o1, o2, pts);
-    static uint32_t last_link_deformation_sent = 0;
-    if ((get_timestamp_ms() - last_link_deformation_sent) > ACQUISINATORE_LINK_DEFORMATION_DELAY_MS) {
-        last_link_deformation_sent = get_timestamp_ms();
-        acquisinatore_send_strain_gauge_val_rr_wheel(link_deformation, secondary_link_deformation_rr_wheel_rod_id_F46);
-    }
-}
-
-#elif ACQUISINATOR_ID == REAR_RIGHT_WHEEL_F17
-
-void acquisinator_task(float ch1, float ch2, float *o1, float *o2, uint32_t *pts) {
-    float link_deformation                     = link_deformation_routine(ch1, ch2, o1, o2, pts);
-    static uint32_t last_link_deformation_sent = 0;
-    if ((get_timestamp_ms() - last_link_deformation_sent) > ACQUISINATORE_LINK_DEFORMATION_DELAY_MS) {
-        last_link_deformation_sent = get_timestamp_ms();
-        acquisinatore_send_strain_gauge_val_rr_wheel(link_deformation, secondary_link_deformation_rr_wheel_rod_id_F17);
-    }
-}
-
-#elif ACQUISINATOR_ID == REAR_RIGHT_WHEEL_F58
-
-void acquisinator_task(float ch1, float ch2, float *o1, float *o2, uint32_t *pts) {
-    float link_deformation                     = link_deformation_routine(ch1, ch2, o1, o2, pts);
-    static uint32_t last_link_deformation_sent = 0;
-    if ((get_timestamp_ms() - last_link_deformation_sent) > ACQUISINATORE_LINK_DEFORMATION_DELAY_MS) {
-        last_link_deformation_sent = get_timestamp_ms();
-        acquisinatore_send_strain_gauge_val_rr_wheel(link_deformation, secondary_link_deformation_rr_wheel_rod_id_F58);
-    }
-}
-
-#elif ACQUISINATOR_ID == REAR_RIGHT_WHEEL_F27
-
-void acquisinator_task(float ch1, float ch2, float *o1, float *o2, uint32_t *pts) {
-    float link_deformation                     = link_deformation_routine(ch1, ch2, o1, o2, pts);
-    static uint32_t last_link_deformation_sent = 0;
-    if ((get_timestamp_ms() - last_link_deformation_sent) > ACQUISINATORE_LINK_DEFORMATION_DELAY_MS) {
-        last_link_deformation_sent = get_timestamp_ms();
-        acquisinatore_send_strain_gauge_val_rr_wheel(link_deformation, secondary_link_deformation_rr_wheel_rod_id_F27);
-    }
-}
-
-#elif ACQUISINATOR_ID == REAR_LEFT_WHEEL_F36
-
-void acquisinator_task(float ch1, float ch2, float *o1, float *o2, uint32_t *pts) {
-    float link_deformation                     = link_deformation_routine(ch1, ch2, o1, o2, pts);
-    static uint32_t last_link_deformation_sent = 0;
-    if ((get_timestamp_ms() - last_link_deformation_sent) > ACQUISINATORE_LINK_DEFORMATION_DELAY_MS) {
-        last_link_deformation_sent = get_timestamp_ms();
-        acquisinatore_send_strain_gauge_val_rl_wheel(link_deformation, secondary_link_deformation_rl_wheel_rod_id_F36);
-    }
-}
-
-#elif ACQUISINATOR_ID == REAR_LEFT_WHEEL_F46
-
-void acquisinator_task(float ch1, float ch2, float *o1, float *o2, uint32_t *pts) {
-    float link_deformation                     = link_deformation_routine(ch1, ch2, o1, o2, pts);
-    static uint32_t last_link_deformation_sent = 0;
-    if ((get_timestamp_ms() - last_link_deformation_sent) > ACQUISINATORE_LINK_DEFORMATION_DELAY_MS) {
-        last_link_deformation_sent = get_timestamp_ms();
-        acquisinatore_send_strain_gauge_val_rl_wheel(link_deformation, secondary_link_deformation_rl_wheel_rod_id_F46);
-    }
-}
-
-#elif ACQUISINATOR_ID == REAR_LEFT_WHEEL_F17
-
-void acquisinator_task(float ch1, float ch2, float *o1, float *o2, uint32_t *pts) {
-    float link_deformation                     = link_deformation_routine(ch1, ch2, o1, o2, pts);
-    static uint32_t last_link_deformation_sent = 0;
-    if ((get_timestamp_ms() - last_link_deformation_sent) > ACQUISINATORE_LINK_DEFORMATION_DELAY_MS) {
-        last_link_deformation_sent = get_timestamp_ms();
-        acquisinatore_send_strain_gauge_val_rl_wheel(link_deformation, secondary_link_deformation_rl_wheel_rod_id_F17);
-    }
-}
-
-#elif ACQUISINATOR_ID == REAR_LEFT_WHEEL_F58
-
-void acquisinator_task(float ch1, float ch2, float *o1, float *o2, uint32_t *pts) {
-    float link_deformation                     = link_deformation_routine(ch1, ch2, o1, o2, pts);
-    static uint32_t last_link_deformation_sent = 0;
-    if ((get_timestamp_ms() - last_link_deformation_sent) > ACQUISINATORE_LINK_DEFORMATION_DELAY_MS) {
-        last_link_deformation_sent = get_timestamp_ms();
-        acquisinatore_send_strain_gauge_val_rl_wheel(link_deformation, secondary_link_deformation_rl_wheel_rod_id_F58);
-    }
-}
-
-#elif ACQUISINATOR_ID == REAR_LEFT_WHEEL_F27
-
-void acquisinator_task(float ch1, float ch2, float *o1, float *o2, uint32_t *pts) {
-    float link_deformation                     = link_deformation_routine(ch1, ch2, o1, o2, pts);
-    static uint32_t last_link_deformation_sent = 0;
-    if ((get_timestamp_ms() - last_link_deformation_sent) > ACQUISINATORE_LINK_DEFORMATION_DELAY_MS) {
-        last_link_deformation_sent = get_timestamp_ms();
-        acquisinatore_send_strain_gauge_val_rl_wheel(link_deformation, secondary_link_deformation_rr_wheel_rod_id_F27);
-    }
-}
-
-#else
-
-#warning EMPTY ACQUISINATOR TASK
-void acquisinator_task(float ch1, float ch2, float *o1, float *o2, uint32_t *pts) {
+    primed = 1;
+    *out   = x;
+    return 1;
 }
 
 #endif
+
+/**
+ * Called by the TIM2 interrupt at ACQUISINATORE_ADC_SAMPLE_RATE: one ADC sample per call, all
+ * equally spaced, through the filter chosen with ACQUISINATORE_ADC_FILTER. Every
+ * ACQUISINATORE_ADC_SEND_EVERY samples a snapshot is handed to the main loop, which sends it on CAN.
+ */
+static void acquisinatore_adc_tick(void) {
+    static uint32_t since_send    = 0;
+    static uint8_t first_transfer = 1;
+
+    uint16_t code;
+    if (ltc1865_transfer(ltc1865_SE_CH2, &code) != 0) {
+        adc_spi_errors++;
+        return;  // the sample is lost, the filter is not polluted
+    }
+    if (first_transfer) {
+        first_transfer = 0;  // the channel of this conversion was not selected yet
+        return;
+    }
+
+    float filtered;
+    if (!acquisinatore_adc_filter(code, &filtered)) {
+        return;  // the filter is not ready yet
+    }
+    if (++since_send >= ACQUISINATORE_ADC_SEND_EVERY) {
+        since_send            = 0;
+        adc_snapshot.filtered = filtered;
+        adc_snapshot.last     = code;
+        adc_snapshot_ready    = 1;
+    }
+}
 
 /* USER CODE END 0 */
 
@@ -414,67 +265,38 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
-#if ACQUISINATORE_FILTER_TYPE == ACQUISINATORE_NO_FILTER
-#elif ACQUISINATORE_FILTER_TYPE == ACQUISINATORE_SIMPLE_MOVING_AVG
-
-#elif ACQUISINATORE_FILTER_TYPE == ACQUISINATORE_GAUSSIAN_FILTER
-    lpfilter_init();
-#elif ACQUISINATORE_FILTER_TYPE == ACQUISINATORE_OLD_MOVING_AVG
-#endif
-
     acquisinatore_set_led_code(acquisinatore_led_code_all_ok);
-    uint32_t previous_timestamp               = get_timestamp_ms();
-    uint32_t version_previous_timestamp       = get_timestamp_ms();
-    uint32_t errors_in_can_previous_timestamp = get_timestamp_ms();
 
-    float offset1, offset2 = 0.0f;
-
-#if ACQUISINATOR_RESETS_TO_DEFAULT_CONFIGS == 1
-    // RESET CONFIGS TO FLASH
-    if (save_configs_to_flash(0.0f, 0.0f, ACQUISINATOR_ID) != HAL_OK) {
-        Error_Handler();
-    }
+    uint32_t spi_errors_seen = 0;
+#if ACQUISINATORE_ADC_FILTER == ACQUISINATORE_ADC_FILTER_NOTCH_LP
+    acquisinatore_adc_filter_init();
 #endif
-
-    offset1                    = read_float_from_flash((float *)ACQUISINATOR_CONFIG_RESERVED_ADDRESS);
-    offset2                    = read_float_from_flash((float *)(ACQUISINATOR_CONFIG_RESERVED_ADDRESS + sizeof(float)));
-    acquisinator_id_from_flash = read_uint32_from_flash((uint32_t *)(ACQUISINATOR_CONFIG_RESERVED_ADDRESS + (2 * sizeof(float))));
-
-    if (acquisinator_id_from_flash == 0 || acquisinator_id_from_flash != ACQUISINATOR_ID) {
-        // the wrong firmware was flashed!!!
-        acquisinatore_set_led_code(acquisinatore_led_code_flashed_firmware_with_wrong_id);
-    }
-
-    /*
-    // [not really necessary] save the read config again to flash
-    if (save_configs_to_flash(offset1, offset2, acquisinator_id_from_flash) != HAL_OK) {
+    if (HAL_TIM_Base_Start_IT(&htim2) != HAL_OK) {  // starts the ADC sampling
         Error_Handler();
     }
-    */
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
     while (1) {
-        if (((get_timestamp_ms() + acquisinator_id_from_flash) - version_previous_timestamp) >
-            SECONDARY_ACQUISINATOR_VERSION_CYCLE_TIME_MS) {
-            acquisinatore_send_version();
-            version_previous_timestamp = get_timestamp_ms();
+        if (adc_snapshot_ready) {
+            __disable_irq();
+            acquisinatore_adc_snapshot_t snapshot = {.filtered = adc_snapshot.filtered, .last = adc_snapshot.last};
+            adc_snapshot_ready = 0;
+            __enable_irq();
+
+            // the notch/low-pass can overshoot past the ADC range on a step: clamp before rounding
+            float filtered = fminf(fmaxf(snapshot.filtered, 0.0f), 65535.0f);
+            // raw data only (traction machine test): the conversion to strain is done offline
+            acquisinatore_send_adc(ACQUISINATORE_VREF_INT * 1000.0f * snapshot.filtered / 65536.0f, snapshot.last,
+                                   (uint16_t)(filtered + 0.5f));
         }
-        if (((get_timestamp_ms() + acquisinator_id_from_flash) - errors_in_can_previous_timestamp) >
-            SECONDARY_ACQUISINATOR_ERRORS_CYCLE_TIME_MS) {
-            acquisinatore_send_errors();
-            errors_in_can_previous_timestamp = get_timestamp_ms();
-        }
-        float ltc1865_channel1_value_in_V = ltc1865_read(ltc1865_SE_CH1);  // normally the channel for the ntc temperature sensor
-        float ltc1865_channel2_value_in_V = ltc1865_read(ltc1865_SE_CH2);  // normally the channel for the strain gauge
-        if (ltc1865_channel1_value_in_V == -1 || ltc1865_channel2_value_in_V == -1) {
+        if (adc_spi_errors != spi_errors_seen) {
+            spi_errors_seen = adc_spi_errors;
             acquisinatore_set_led_code(acquisinatore_led_code_spi_error);
         }
-        acquisinator_task(ltc1865_channel1_value_in_V, ltc1865_channel2_value_in_V, &offset1, &offset2, &previous_timestamp);
         acquisinatore_led_code_routine();
-        can_routine();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -543,7 +365,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
-
+    if (htim->Instance == TIM2) {
+        acquisinatore_adc_tick();
+    }
   /* USER CODE END Callback 1 */
 }
 
