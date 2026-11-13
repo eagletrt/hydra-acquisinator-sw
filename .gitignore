@@ -20,3 +20,5 @@ docs/inverse_formulas_ammo_compression.py
 
 # sessioni registrate da Tools/read_both_acquisinators.py
 Tools/sessions/
+
+.DS_Store
