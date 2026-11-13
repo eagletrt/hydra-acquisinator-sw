@@ -110,13 +110,28 @@ typedef enum { ltc1865_DIFF, ltc1865_DIFF_INVERTED, ltc1865_SE_CH1, ltc1865_SE_C
 
 // ---- the two settings to change ----
 #define ACQUISINATORE_ADC_FILTER    ACQUISINATORE_ADC_FILTER_AVG_20MS
+#ifndef ACQUISINATORE_RAW_STREAM
 // frames per second on CAN: 300 for bench tests; lower in the car to load the bus less
 // (~130 bit per frame: 300 Hz = 4% of 1 Mbit/s). Must divide 1500: 300, 250, 150, 100, 75, 60, 50...
 #define ACQUISINATORE_ADC_SEND_RATE (300U)
+#endif
 // ------------------------------------
 
+#ifdef ACQUISINATORE_RAW_STREAM
+// Bench only (env "raw" in platformio.ini): ADC at 8 kHz and EVERY sample on CAN, frame
+// ACQUISINATORE_ADC_STREAM_CAN_ID, 3 samples per frame = 2667 frames/s, ~35% of 1 Mbit/s: too much
+// for the car bus. The filtered frame ACQUISINATORE_ADC_CAN_ID is still sent, at SEND_RATE.
+// SPI at 72 MHz / 64 = 1.125 MHz: one read takes ~15 us of the 125 us period (at /256 it is ~60 us).
+#define ACQUISINATORE_ADC_SAMPLE_RATE  (8000U)
+#define ACQUISINATORE_ADC_AVG_SAMPLES  (160U)   // AVG_20MS: 160 / 8000 Hz = 20 ms
+#define ACQUISINATORE_ADC_SEND_RATE    (250U)   // must divide 8000
+#define ACQUISINATORE_ADC_STREAM_CAN_ID (0x7B1U)
+#define ACQUISINATORE_ADC_STREAM_PER_FRAME (3U)
+#define ACQUISINATORE_ADC_STREAM_FRAMES (256U)  // queue between TIM2 and main loop, power of 2: ~96 ms
+#else
 #define ACQUISINATORE_ADC_SAMPLE_RATE  (1500U)  // Hz, TIM2 update rate
 #define ACQUISINATORE_ADC_AVG_SAMPLES  (30U)    // AVG_20MS: 30 / 1500 Hz = 20 ms = one 50 Hz period
+#endif
 #define ACQUISINATORE_ADC_SEND_EVERY   (ACQUISINATORE_ADC_SAMPLE_RATE / ACQUISINATORE_ADC_SEND_RATE)
 // NOTCH_LP: the low-pass follows the send rate, so a lower rate does not alias
 #define ACQUISINATORE_ADC_LP_CUTOFF_HZ ((float)ACQUISINATORE_ADC_SEND_RATE / 4.0f)

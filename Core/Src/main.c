@@ -31,6 +31,8 @@
 #include "error_codes.h"
 #include "math.h"
 
+#include <string.h>
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -67,6 +69,56 @@ typedef struct {
 } acquisinatore_adc_snapshot_t;
 
 static volatile acquisinatore_adc_snapshot_t adc_snapshot;
+
+#ifdef ACQUISINATORE_RAW_STREAM
+// Raw samples for CAN, already packed as frames by TIM2 (format in Tools/acquisinator_hydra_adc.dbc):
+// bytes 0..5 three codes (u16 LE), byte 6 index of the first sample (mod 256, counts every TIM2 tick:
+// a jump other than 3 = lost frames), byte 7 bit k = sample k valid (0 = SPI error, code 0).
+// One producer (TIM2), one consumer (main loop); with the queue full whole frames are dropped.
+static uint8_t adc_stream[ACQUISINATORE_ADC_STREAM_FRAMES][8];
+static volatile uint32_t adc_stream_head = 0;  // written by TIM2
+static volatile uint32_t adc_stream_tail = 0;  // written by the main loop
+
+static void acquisinatore_adc_stream_push(uint16_t code, int valid) {
+    static uint8_t frame[8];
+    static uint32_t slot = 0;
+    static uint8_t index = 0;  // tick counter
+    if (slot == 0U) {
+        frame[6] = index;
+        frame[7] = 0;
+    }
+    frame[2U * slot]      = (uint8_t)code;
+    frame[2U * slot + 1U] = (uint8_t)(code >> 8);
+    if (valid) {
+        frame[7] |= (uint8_t)(1U << slot);
+    }
+    index++;
+    if (++slot < ACQUISINATORE_ADC_STREAM_PER_FRAME) {
+        return;
+    }
+    slot          = 0;
+    uint32_t head = adc_stream_head;
+    if (head - adc_stream_tail < ACQUISINATORE_ADC_STREAM_FRAMES) {
+        memcpy(adc_stream[head % ACQUISINATORE_ADC_STREAM_FRAMES], frame, sizeof(frame));
+        __DMB();  // frame written before the new head
+        adc_stream_head = head + 1U;
+    }
+}
+
+// Sends the queued frames, leaving one mailbox free for the filtered frame (can_mgr_send waits
+// for a free one, and a failed send resets the board)
+static void acquisinatore_adc_stream_poll(void) {
+    uint32_t tail = adc_stream_tail;
+    while (tail != adc_stream_head && HAL_CAN_GetTxMailboxesFreeLevel(&hcan) >= 2U) {
+        __DMB();
+        CAN_TxHeaderTypeDef header = {.StdId = ACQUISINATORE_ADC_STREAM_CAN_ID, .IDE = CAN_ID_STD, .RTR = CAN_RTR_DATA, .DLC = 8};
+        uint32_t mailbox;
+        (void)HAL_CAN_AddTxMessage(&hcan, &header, adc_stream[tail % ACQUISINATORE_ADC_STREAM_FRAMES], &mailbox);
+        tail++;
+        adc_stream_tail = tail;
+    }
+}
+#endif
 static volatile uint8_t adc_snapshot_ready = 0;
 static volatile uint32_t adc_spi_errors    = 0;
 
@@ -209,12 +261,18 @@ static void acquisinatore_adc_tick(void) {
     uint16_t code;
     if (ltc1865_transfer(ltc1865_SE_CH2, &code) != 0) {
         adc_spi_errors++;
+#ifdef ACQUISINATORE_RAW_STREAM
+        acquisinatore_adc_stream_push(0U, 0);
+#endif
         return;  // the sample is lost, the filter is not polluted
     }
     if (first_transfer) {
         first_transfer = 0;  // the channel of this conversion was not selected yet
         return;
     }
+#ifdef ACQUISINATORE_RAW_STREAM
+    acquisinatore_adc_stream_push(code, 1);
+#endif
 
     float filtered;
     if (!acquisinatore_adc_filter(code, &filtered)) {
@@ -292,6 +350,9 @@ int main(void)
             acquisinatore_send_adc(ACQUISINATORE_VREF_INT * 1000.0f * snapshot.filtered / 65536.0f, snapshot.last,
                                    (uint16_t)(filtered + 0.5f));
         }
+#ifdef ACQUISINATORE_RAW_STREAM
+        acquisinatore_adc_stream_poll();
+#endif
         if (adc_spi_errors != spi_errors_seen) {
             spi_errors_seen = adc_spi_errors;
             acquisinatore_set_led_code(acquisinatore_led_code_spi_error);

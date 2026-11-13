@@ -206,7 +206,10 @@ void MX_SPI1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN SPI1_Init 2 */
-
+#ifdef ACQUISINATORE_RAW_STREAM
+    // 8 kHz sampling: SCK 72 MHz / 64 = 1.125 MHz (SPI still disabled here, ltc1865_transfer enables it)
+    MODIFY_REG(SPI1->CR1, SPI_CR1_BR, SPI_BAUDRATEPRESCALER_64);
+#endif
   /* USER CODE END SPI1_Init 2 */
 
 }
