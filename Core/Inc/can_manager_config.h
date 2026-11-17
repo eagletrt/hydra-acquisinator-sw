@@ -1,9 +1,0 @@
-#ifndef CAN_MANAGER_CONFIG_H
-#define CAN_MANAGER_CONFIG_H
-
-#define CAN_MGR_STM32_APPLICATION
-#define CAN_MGR_N_CAN              1
-#define CAN_MGR_TOTAL_CAN_RX_FIFOS 1
-#define CAN_MGR_CAN_WAIT_ENABLED   1
-
-#endif  // CAN_MANAGER_CONFIG_H
