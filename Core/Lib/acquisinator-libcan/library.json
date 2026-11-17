@@ -1,0 +1,37 @@
+{
+  "$schema": "https://raw.githubusercontent.com/platformio/platformio-core/develop/platformio/assets/schema/library.json",
+  "name": "acquisinator-libcan-sw",
+  "version": "0.0.1",
+  "description": "Can-bus software library for network serialization and deserialization",
+  "keywords": ["can-bus", "network", "serialization", "deserialization"],
+  "authors": [
+    {
+      "name": "Valerio Cancemi",
+      "email": "valerio.cancemi04@gmail.com"
+    },
+    {
+      "name": "Mattia Santaniello",
+      "email": ""
+    },
+    {
+      "name": "Thomas Moretti",
+      "email": ""
+    }
+  ],
+  "license": "AGPL-3.0-only",
+  "frameworks": "*",
+  "platforms": "*",
+  "headers": ["include/acquisinator/can-acquisinator-api.h"],
+  "examples": [],
+  "export": {
+    "include": ["include/**", "src/**"]
+  },
+  "build": {
+    "flags": ["-I include/acquisinator", "-std=c23"],
+    "unflags": "-std=gnu++11",
+    "srcFilter": ["+<*>", "-<**/*.cpp>", "-<**/*.hpp>"]
+  },
+  "dependencies": {
+    "libeagletrt-sw": "https://github.com/eagletrt/libeagletrt-sw.git"
+  }
+}

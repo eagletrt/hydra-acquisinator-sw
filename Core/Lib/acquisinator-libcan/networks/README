@@ -1,0 +1,103 @@
+## Input for generation
+
+This directory contains the input files used to generate the CAN library.
+Each CAN network must be placed in its own folder.
+
+## How to structure the input folder
+
+1. Create a folder named after the CAN network.
+   Example:
+   bms/
+
+2. Place inside that folder:
+   - One or more .dbc files
+   - One .json file following the schema in schema.json
+
+The generator will automatically process everything in that directory.
+
+## How to validate the JSON file
+
+Each JSON file must follow the specification described in schema.json.
+You can validate your file using any JSON Schema validator compatible with draft-07.
+
+Example command:
+jsonschema -i your_network/messages.json schema.json
+
+## JSON structure overview
+
+The JSON describes:
+
+- Optional custom type definitions (enums and bitsets)
+- A list of messages, each containing:
+  - name, sending nodes, receiving nodes
+  - either a topic + priority (automatic ID generation)
+    or a fixed_id
+  - optional interval, description and endianness
+  - a contents section defining the message signals
+
+### Simple signal example
+
+```json
+"speed": "uint16"
+```
+
+### Detailed signal example
+
+```json
+"temperature": {
+  "type": "float32",
+  "range": [-40, 150],
+  "precision": 0.1
+}
+```
+
+### Custom type example (enum)
+
+```json
+"types": {
+  "ChargingState": {
+    "type": "enum",
+    "items": ["Idle", "Charging", "Error"]
+  }
+}
+```
+
+### Custom type example (bitset)
+
+```json
+"types": {
+  "ErrorFlags": {
+    "type": "bitset",
+    "items": ["Overvoltage", "Overtemp", "Disconnected"]
+  }
+}
+```
+
+These custom types can then be used in the message contents:
+
+```json
+"state": "ChargingState"
+```
+
+## Example JSON file
+
+```json
+{
+  "messages": [
+    {
+      "name": "BMS_STATUS",
+      "topic": "bms",
+      "priority": 1,
+      "sending": ["BMS"],
+      "receiving": ["VCU", "TLM"],
+      "contents": {
+        "voltage": "uint16",
+        "temperature": {
+          "type": "float32",
+          "range": [-40, 120]
+        }
+      }
+    }
+  ]
+}
+```

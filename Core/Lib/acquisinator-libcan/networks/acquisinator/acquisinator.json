@@ -1,0 +1,25 @@
+{
+  "version": 0.1,
+  "nodes": [
+    {
+      "name": "Acquisinator",
+      "comment": "Strain gauge acquisition board."
+    }
+  ],
+  "messages": [
+    {
+      "name": "ACQUISINATOR_RAW",
+      "can_id": 18,
+      "length": 8,
+      "sender": "Acquisinator",
+      "comment": "One frame per raw ADC sample (amplifier output, CH0).",
+      "signals": [
+        {
+          "name": "Debug_adcRaw_U",
+          "type": "uint16",
+          "comment": "Raw ADC code (0..65535), not converted to volts."
+        }
+      ]
+    }
+  ]
+}

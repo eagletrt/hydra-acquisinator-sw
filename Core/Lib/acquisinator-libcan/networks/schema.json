@@ -1,0 +1,276 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CAN Network Schema",
+  "type": "object",
+  "required": ["messages"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "number" },
+    "types": {
+      "type": "object",
+      "description": "Custom type definitions. Built-in types (int8/16/32/64, uint8/16/32/64, float, double, bool) are always available.",
+      "additionalProperties": { "$ref": "#/$defs/type_definition" }
+    },
+    "attributes": {
+      "type": "array",
+      "description": "Attribute definitions (BA_DEF_) — global, per-node, per-message or per-signal.",
+      "items": { "$ref": "#/$defs/attribute_definition" }
+    },
+    "nodes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "messages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/message" }
+    }
+  },
+  "$defs": {
+    "type_definition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["type", "size"],
+          "additionalProperties": false,
+          "description": "Signed integer C type",
+          "properties": {
+            "type": { "type": "string", "const": "int" },
+            "size": { "type": "integer", "enum": [8, 16, 32, 64] },
+            "comment": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "size"],
+          "additionalProperties": false,
+          "description": "Unsigned integer C type",
+          "properties": {
+            "type": { "type": "string", "const": "uint" },
+            "size": { "type": "integer", "enum": [8, 16, 32, 64] },
+            "comment": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type"],
+          "additionalProperties": false,
+          "description": "32-bit IEEE 754 float",
+          "properties": {
+            "type": { "type": "string", "const": "float" },
+            "comment": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type"],
+          "additionalProperties": false,
+          "description": "64-bit IEEE 754 double",
+          "properties": {
+            "type": { "type": "string", "const": "double" },
+            "comment": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type"],
+          "additionalProperties": false,
+          "description": "Boolean type",
+          "properties": {
+            "type": { "type": "string", "const": "bool" },
+            "comment": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["type", "items"],
+          "additionalProperties": false,
+          "description": "Enum type with named values",
+          "properties": {
+            "type": { "type": "string", "const": "enum" },
+            "comment": { "type": "string" },
+            "items": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/enum_item" }
+            }
+          }
+        }
+      ]
+    },
+    "enum_item": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "value": { "type": "integer" },
+        "comment": { "type": "string" }
+      }
+    },
+    "attribute_definition": {
+      "type": "object",
+      "required": ["name", "type", "default"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "field": {
+          "type": "string",
+          "enum": ["global", "node", "message", "signal"]
+        },
+        "type": {
+          "type": "string",
+          "enum": ["INT", "HEX", "FLOAT", "STRING", "ENUM"]
+        },
+        "range": { "$ref": "#/$defs/attribute_range" },
+        "default": {}
+      }
+    },
+    "attribute_range": {
+      "type": "object",
+      "oneOf": [
+        {
+          "required": ["min", "max"],
+          "additionalProperties": false,
+          "properties": {
+            "min": { "type": "number" },
+            "max": { "type": "number" }
+          }
+        },
+        {
+          "required": ["fields"],
+          "additionalProperties": false,
+          "properties": {
+            "fields": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      ]
+    },
+    "attribute_value": {
+      "type": "object",
+      "required": ["name", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "value": {}
+      }
+    },
+    "signal": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "title": "DBC classic",
+          "description": "Raw DBC params provided — tool computes min/max.",
+          "required": ["length", "signed", "scale", "offset"]
+        },
+        {
+          "title": "Designer",
+          "description": "Physical limits + bit space provided — tool computes scale/offset.",
+          "required": ["min", "max", "length"]
+        },
+        {
+          "title": "Auto-sizing",
+          "description": "Physical limits + resolution provided — tool computes bit count.",
+          "required": ["min", "max", "scale"]
+        },
+        {
+          "title": "Type-only",
+          "description": "Sized type provided (e.g. uint8) — tool uses default scale/offset.",
+          "required": ["type"]
+        }
+      ],
+      "properties": {
+        "name": { "type": "string" },
+        "type": {
+          "type": "string",
+          "description": "Type name — built-in or defined in 'types'"
+        },
+        "bit_start": { "type": "integer", "minimum": 0 },
+        "length": { "type": "integer", "minimum": 1 },
+        "endianness": {
+          "type": "string",
+          "enum": ["BigEndian", "LittleEndian"]
+        },
+        "signed": { "type": "boolean" },
+        "scale": { "type": "number" },
+        "offset": { "type": "number" },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "unit": { "type": "string" },
+        "receivers": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "comment": { "type": "string" },
+        "mux_id": {
+          "type": "integer",
+          "description": "Only valid inside a 'multiplexed' array"
+        },
+        "multiplexed": {
+          "type": "array",
+          "description": "Signals multiplexed by this signal — each must have mux_id",
+          "items": { "$ref": "#/$defs/signal" }
+        },
+        "bitfield": { "type": "boolean" },
+        "attributes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/attribute_value" }
+        }
+      }
+    },
+    "message": {
+      "type": "object",
+      "required": ["name", "sender"],
+      "additionalProperties": false,
+      "oneOf": [{ "required": ["can_id"] }, { "required": ["priority"] }],
+      "properties": {
+        "name": { "type": "string" },
+        "can_id": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Fixed CAN frame ID"
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "safety_critical",
+            "safety_monitoring",
+            "action",
+            "monitoring",
+            "debug"
+          ],
+          "description": "Priority for automatic ID generation"
+        },
+        "length": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8,
+          "description": "Payload length in bytes — computed automatically if omitted"
+        },
+        "sender": { "type": "string" },
+        "comment": { "type": "string" },
+        "signals": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/signal" }
+        },
+        "attributes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/attribute_value" }
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "comment": { "type": "string" },
+        "attributes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/attribute_value" }
+        }
+      }
+    }
+  }
+}

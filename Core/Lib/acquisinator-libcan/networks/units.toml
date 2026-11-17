@@ -1,0 +1,249 @@
+# Units of measurement accepted for CAN signals.
+#
+# Units follow the International System of Units (SI) plus a small set of
+# exceptions agreed by the team. Imperial units are not allowed.
+#
+# Signal names follow `attributes_unit` (e.g. `packVoltage_V`): the part after
+# the last underscore is the unit *suffix*. It must be one of the units below,
+# optionally preceded by an SI prefix when the unit allows prefixes
+# (e.g. `outputPower_kW`, `period_ms`, `cellVoltage_mV`).
+#
+# Suffixes contain letters and digits only: symbols are replaced by a set of
+# characters or removed (° → deg, m/s → mps, m/s^2 → mps2, Ω → Ohm, µ → u).
+# Case follows the SI symbol (`V`, `mA`, `kHz`) or the listed exception.
+#
+# The optional signal `unit` field (the unit written in the DBC) may be omitted.
+# When given it must describe the same unit as the name suffix: it is accepted
+# if it matches the suffix, the unit `symbol` or one of its `aliases`, with the
+# same prefix (e.g. `temperature_degC` accepts "degC" or "°C").
+#
+# Every prefix + unit combination must be unique: the generator refuses to load
+# this file if, for example, a prefixed unit spells another unit.
+#
+# [prefixes.<prefix>]
+#   name      prefix name (REQUIRED)
+#   symbol    SI symbol when it differs from the prefix (default: the prefix)
+#
+# [units.<suffix>]
+#   name      human readable name (REQUIRED)
+#   symbol    SI symbol when it differs from the suffix (default: the suffix)
+#   aliases   other values accepted in the `unit` field (default: none)
+#   prefixes  true if SI prefixes are allowed (default: false)
+
+# --- SI prefixes -------------------------------------------------------------
+
+[prefixes.Q]
+name = "quetta"
+[prefixes.R]
+name = "ronna"
+[prefixes.Y]
+name = "yotta"
+[prefixes.Z]
+name = "zetta"
+[prefixes.E]
+name = "exa"
+[prefixes.P]
+name = "peta"
+[prefixes.T]
+name = "tera"
+[prefixes.G]
+name = "giga"
+[prefixes.M]
+name = "mega"
+[prefixes.k]
+name = "kilo"
+[prefixes.h]
+name = "hecto"
+[prefixes.da]
+name = "deca"
+[prefixes.d]
+name = "deci"
+[prefixes.c]
+name = "centi"
+[prefixes.m]
+name = "milli"
+[prefixes.u]
+name = "micro"
+symbol = "µ"
+[prefixes.n]
+name = "nano"
+[prefixes.p]
+name = "pico"
+[prefixes.f]
+name = "femto"
+[prefixes.a]
+name = "atto"
+[prefixes.z]
+name = "zepto"
+[prefixes.y]
+name = "yocto"
+[prefixes.r]
+name = "ronto"
+[prefixes.q]
+name = "quecto"
+
+# --- Exceptions (not SI) -----------------------------------------------------
+
+[units.U]
+name = "dimensionless (uno)"
+
+[units.bool]
+name = "boolean"
+
+[units.enum]
+name = "states/enumeration"
+
+[units.bar]
+name = "bar"
+prefixes = true
+
+[units.l]
+name = "litre"
+aliases = ["L"]
+prefixes = true
+
+# --- SI base units -----------------------------------------------------------
+# The kilogram is written through the gram with the kilo prefix (`kg`).
+
+[units.s]
+name = "second"
+prefixes = true
+
+[units.m]
+name = "metre"
+prefixes = true
+
+[units.g]
+name = "gram"
+prefixes = true
+
+[units.A]
+name = "ampere"
+prefixes = true
+
+[units.K]
+name = "kelvin"
+prefixes = true
+
+[units.mol]
+name = "mole"
+prefixes = true
+
+[units.cd]
+name = "candela"
+prefixes = true
+
+# --- SI derived units --------------------------------------------------------
+
+[units.rad]
+name = "radian"
+prefixes = true
+
+[units.sr]
+name = "steradian"
+prefixes = true
+
+[units.Hz]
+name = "hertz"
+prefixes = true
+
+[units.N]
+name = "newton"
+prefixes = true
+
+[units.Pa]
+name = "pascal"
+prefixes = true
+
+[units.J]
+name = "joule"
+prefixes = true
+
+[units.W]
+name = "watt"
+prefixes = true
+
+[units.C]
+name = "coulomb"
+prefixes = true
+
+[units.V]
+name = "volt"
+prefixes = true
+
+[units.F]
+name = "farad"
+prefixes = true
+
+[units.Ohm]
+name = "ohm"
+symbol = "Ω"
+prefixes = true
+
+[units.S]
+name = "siemens"
+prefixes = true
+
+[units.Wb]
+name = "weber"
+prefixes = true
+
+[units.T]
+name = "tesla"
+prefixes = true
+
+[units.H]
+name = "henry"
+prefixes = true
+
+[units.degC]
+name = "degree Celsius"
+symbol = "°C"
+
+[units.lm]
+name = "lumen"
+prefixes = true
+
+[units.lx]
+name = "lux"
+prefixes = true
+
+[units.Bq]
+name = "becquerel"
+prefixes = true
+
+[units.Gy]
+name = "gray"
+prefixes = true
+
+[units.Sv]
+name = "sievert"
+prefixes = true
+
+[units.kat]
+name = "katal"
+prefixes = true
+
+# --- Compound units (symbols replaced) --------------------------------------
+
+[units.deg]
+name = "degree (angle)"
+symbol = "°"
+
+[units.mps]
+name = "metre per second"
+symbol = "m/s"
+
+[units.mps2]
+name = "metre per second squared"
+symbol = "m/s^2"
+aliases = ["m/s2", "m/s²"]
+
+[units.radps]
+name = "radian per second"
+symbol = "rad/s"
+
+[units.Nm]
+name = "newton metre"
+symbol = "N*m"
+aliases = ["N.m", "N·m"]
