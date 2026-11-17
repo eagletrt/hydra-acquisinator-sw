@@ -108,13 +108,32 @@ int8_t can_acquisinator_api_serialize_from_id(
 
     memset(dst_p, 0, 8);
     dst_p[0] |= int_pack_left_shift_u16(
-        EAGLETRT_API_MIN(data->acquisinator_raw.debug_adc_raw_u,
+        EAGLETRT_API_MIN(data->acquisinator_raw.debug_adc_raw0_u,
                          (uint16_t)(65535)),
         0u, 0xffU);
     dst_p[1] |= int_pack_right_shift_u16(
-        EAGLETRT_API_MIN(data->acquisinator_raw.debug_adc_raw_u,
+        EAGLETRT_API_MIN(data->acquisinator_raw.debug_adc_raw0_u,
                          (uint16_t)(65535)),
         8u, 0xffU);
+    dst_p[2] |= int_pack_left_shift_u16(
+        EAGLETRT_API_MIN(data->acquisinator_raw.debug_adc_raw1_u,
+                         (uint16_t)(65535)),
+        0u, 0xffU);
+    dst_p[3] |= int_pack_right_shift_u16(
+        EAGLETRT_API_MIN(data->acquisinator_raw.debug_adc_raw1_u,
+                         (uint16_t)(65535)),
+        8u, 0xffU);
+    dst_p[4] |= int_pack_left_shift_u16(
+        EAGLETRT_API_MIN(data->acquisinator_raw.debug_adc_raw2_u,
+                         (uint16_t)(65535)),
+        0u, 0xffU);
+    dst_p[5] |= int_pack_right_shift_u16(
+        EAGLETRT_API_MIN(data->acquisinator_raw.debug_adc_raw2_u,
+                         (uint16_t)(65535)),
+        8u, 0xffU);
+    dst_p[6] |= int_pack_left_shift_u8(
+        EAGLETRT_API_MIN(data->acquisinator_raw.debug_seq_u, (uint8_t)(255)),
+        0u, 0xffU);
     return can_acquisinator_byte_size_acquisinator_raw;
   }
 
@@ -141,10 +160,20 @@ int8_t can_acquisinator_api_deserialize_from_id(
 ) {
   switch (message_id) {
   case CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_RAW: {
-    dst_p->acquisinator_raw.debug_adc_raw_u =
+    dst_p->acquisinator_raw.debug_adc_raw0_u =
         int_unpack_right_shift_u16(data[0], 0U, 0xffU);
-    dst_p->acquisinator_raw.debug_adc_raw_u |=
+    dst_p->acquisinator_raw.debug_adc_raw0_u |=
         int_unpack_left_shift_u16(data[1], 8U, 0xffU);
+    dst_p->acquisinator_raw.debug_adc_raw1_u =
+        int_unpack_right_shift_u16(data[2], 0U, 0xffU);
+    dst_p->acquisinator_raw.debug_adc_raw1_u |=
+        int_unpack_left_shift_u16(data[3], 8U, 0xffU);
+    dst_p->acquisinator_raw.debug_adc_raw2_u =
+        int_unpack_right_shift_u16(data[4], 0U, 0xffU);
+    dst_p->acquisinator_raw.debug_adc_raw2_u |=
+        int_unpack_left_shift_u16(data[5], 8U, 0xffU);
+    dst_p->acquisinator_raw.debug_seq_u =
+        int_unpack_right_shift_u8(data[6], 0U, 0xffU);
 #ifdef LIBCAN_TIMESTAMP
     dst_p->acquisinator_raw.timestamp = timestamp;
 #endif // LIBCAN_TIMESTAMP

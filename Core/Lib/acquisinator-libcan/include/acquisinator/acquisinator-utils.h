@@ -16,7 +16,10 @@ extern "C" {
 /* START */
 #define ACQUISINATOR_RAW "ACQUISINATOR_RAW"
 
-#define ACQUISINATOR_RAW_DEBUG_ADC_RAW_U "debug_adc_raw_u"
+#define ACQUISINATOR_RAW_DEBUG_ADC_RAW0_U "debug_adc_raw0_u"
+#define ACQUISINATOR_RAW_DEBUG_ADC_RAW1_U "debug_adc_raw1_u"
+#define ACQUISINATOR_RAW_DEBUG_ADC_RAW2_U "debug_adc_raw2_u"
+#define ACQUISINATOR_RAW_DEBUG_SEQ_U "debug_seq_u"
 /* END */
 
 /* START CANLIB UNKNOWN */
@@ -31,7 +34,8 @@ extern "C" {
 /* END MUX MESSAGES ID */
 enum acquisinator_types_id {
 
-  e_acquisinator_uint16_t = -1,
+  e_acquisinator_uint16_t = -2,
+  e_acquisinator_uint8_t,
 
 };
 

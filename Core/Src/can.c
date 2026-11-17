@@ -21,7 +21,7 @@
 #include "can.h"
 
 /* USER CODE BEGIN 0 */
-
+#include "can-communications-api.h"
 /* USER CODE END 0 */
 
 CAN_HandleTypeDef hcan;
@@ -84,11 +84,11 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     /* CAN interrupt Init */
-    HAL_NVIC_SetPriority(CAN_TX_IRQn, 0, 0);
+    HAL_NVIC_SetPriority(CAN_TX_IRQn, 1, 0);
     HAL_NVIC_EnableIRQ(CAN_TX_IRQn);
-    HAL_NVIC_SetPriority(CAN_RX0_IRQn, 0, 0);
+    HAL_NVIC_SetPriority(CAN_RX0_IRQn, 1, 0);
     HAL_NVIC_EnableIRQ(CAN_RX0_IRQn);
-    HAL_NVIC_SetPriority(CAN_RX1_IRQn, 0, 0);
+    HAL_NVIC_SetPriority(CAN_RX1_IRQn, 1, 0);
     HAL_NVIC_EnableIRQ(CAN_RX1_IRQn);
   /* USER CODE BEGIN CAN_MspInit 1 */
 
@@ -124,6 +124,87 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 }
 
 /* USER CODE BEGIN 1 */
+
+/*!
+ * \brief Accept every standard frame into FIFO0, start the peripheral and
+ *     enable the RX interrupt. Call after can_communications_api_init.
+ */
+void can_start(void) {
+  const CAN_FilterTypeDef filter = {
+    .FilterBank = 0U,
+    .FilterMode = CAN_FILTERMODE_IDMASK,
+    .FilterScale = CAN_FILTERSCALE_32BIT,
+    .FilterIdHigh = 0U,
+    .FilterIdLow = 0U,
+    .FilterMaskIdHigh = 0U,
+    .FilterMaskIdLow = 0U,
+    .FilterFIFOAssignment = CAN_FILTER_FIFO0,
+    .FilterActivation = CAN_FILTER_ENABLE,
+    .SlaveStartFilterBank = 14U,
+  };
+  if (HAL_CAN_ConfigFilter(&hcan, &filter) != HAL_OK) {
+    Error_Handler();
+  }
+  if (HAL_CAN_Start(&hcan) != HAL_OK) {
+    Error_Handler();
+  }
+  if (HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) {
+    Error_Handler();
+  }
+}
+
+/*!
+ * \brief can-communications send callback.
+ *
+ * \details bxCAN has only 3 TX mailboxes and PAL drops a frame whose send
+ *     fails, so a full mailbox set is reported as a transmission error.
+ */
+enum CanCommunicationReturnCode can_send(const struct CanCommunicationFrame *frame) {
+  if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) == 0U) {
+    return CAN_COMMUNICATION_RC_TRANSMISSION_ERROR;
+  }
+
+  const CAN_TxHeaderTypeDef header = {
+    .StdId = frame->id,
+    .IDE = CAN_ID_STD,
+    .RTR = CAN_RTR_DATA,
+    .DLC = frame->length,
+    .TransmitGlobalTime = DISABLE,
+  };
+  uint32_t mailbox = 0U;
+  // HAL takes a non-const data buffer but never writes to it
+  if (HAL_CAN_AddTxMessage(&hcan, &header, (uint8_t *)frame->data, &mailbox) != HAL_OK) {
+    return CAN_COMMUNICATION_RC_TRANSMISSION_ERROR;
+  }
+  return CAN_COMMUNICATION_RC_OK;
+}
+
+/*!
+ * \brief can-communications receive callback: nothing to receive yet.
+ */
+enum CanCommunicationReturnCode can_on_receive(const struct CanCommunicationFrame *frame) {
+  (void)frame;
+  return CAN_COMMUNICATION_RC_OK;
+}
+
+/*!
+ * \brief RX ISR: move every pending frame into the can-communications RX queue.
+ */
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan_isr) {
+  CAN_RxHeaderTypeDef header = { 0 };
+  struct CanCommunicationFrame frame = { 0 };
+  while (HAL_CAN_GetRxFifoFillLevel(hcan_isr, CAN_RX_FIFO0) > 0U) {
+    if (HAL_CAN_GetRxMessage(hcan_isr, CAN_RX_FIFO0, &header, frame.data) != HAL_OK) {
+      return;
+    }
+    if (header.IDE != CAN_ID_STD || header.RTR != CAN_RTR_DATA) {
+      continue;
+    }
+    frame.id = header.StdId;
+    frame.length = (uint8_t)header.DLC;
+    (void)can_communications_api_add_to_rx_buffer(&frame);
+  }
+}
 
 /* USER CODE END 1 */
 

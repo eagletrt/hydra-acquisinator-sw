@@ -13,11 +13,11 @@
  */
 
 /*! Library version */
-constexpr uint32_t can_version_major = 0U;
+constexpr uint32_t can_version_major = 1U;
 constexpr uint32_t can_version_minor = 0U;
-constexpr uint32_t can_version_patch = 1U;
+constexpr uint32_t can_version_patch = 0U;
 
 /*! Library generation timestamp */
-constexpr uint64_t can_generation_time = 1794919389ULL;
+constexpr uint64_t can_generation_time = 1794926645ULL;
 
 #endif // CAN_VERSION_H

@@ -21,8 +21,13 @@
 #define ACQUISINATOR_UINT64_ZERO (static_cast<uint64_t>(0))
 #define ACQUISINATOR_BOOL_ZERO (static_cast<bool>(0))
 
-#define ACQUISINATOR_ACQUISINATOR_RAW_DEBUG_ADC_RAW_U_MIN                      \
+#define ACQUISINATOR_ACQUISINATOR_RAW_DEBUG_ADC_RAW0_U_MIN                     \
   (ACQUISINATOR_UINT16_ZERO)
+#define ACQUISINATOR_ACQUISINATOR_RAW_DEBUG_ADC_RAW1_U_MIN                     \
+  (ACQUISINATOR_UINT16_ZERO)
+#define ACQUISINATOR_ACQUISINATOR_RAW_DEBUG_ADC_RAW2_U_MIN                     \
+  (ACQUISINATOR_UINT16_ZERO)
+#define ACQUISINATOR_ACQUISINATOR_RAW_DEBUG_SEQ_U_MIN (ACQUISINATOR_UINT8_ZERO)
 
 typedef std::unordered_map<std::string, std::vector<double>> message_signals;
 typedef std::unordered_map<std::string, std::vector<uint64_t>> message_enums;
@@ -72,8 +77,14 @@ TEST(TestCanAcquisinatorAcquisinatorRaw, CheckSerializeDeserialize) {
 
   CanAcquisinatorMessage *messages = new CanAcquisinatorMessage();
   acquisinator::Pack acquisinator_pack;
-  messages->acquisinator_raw.debug_adc_raw_u =
-      (uint16_t)ACQUISINATOR_ACQUISINATOR_RAW_DEBUG_ADC_RAW_U_MIN;
+  messages->acquisinator_raw.debug_adc_raw0_u =
+      (uint16_t)ACQUISINATOR_ACQUISINATOR_RAW_DEBUG_ADC_RAW0_U_MIN;
+  messages->acquisinator_raw.debug_adc_raw1_u =
+      (uint16_t)ACQUISINATOR_ACQUISINATOR_RAW_DEBUG_ADC_RAW1_U_MIN;
+  messages->acquisinator_raw.debug_adc_raw2_u =
+      (uint16_t)ACQUISINATOR_ACQUISINATOR_RAW_DEBUG_ADC_RAW2_U_MIN;
+  messages->acquisinator_raw.debug_seq_u =
+      (uint8_t)ACQUISINATOR_ACQUISINATOR_RAW_DEBUG_SEQ_U_MIN;
   messages->acquisinator_raw.timestamp = 0;
 
   acquisinator_proto_interface_serialize_from_id(
@@ -81,9 +92,17 @@ TEST(TestCanAcquisinatorAcquisinatorRaw, CheckSerializeDeserialize) {
       messages);
   acquisinator_proto_interface_deserialize(&acquisinator_pack, circular_buffer,
                                            0);
-  uint16_t debug_adc_raw_u =
-      msg_signals[ACQUISINATOR_RAW_DEBUG_ADC_RAW_U].back();
-  EXPECT_EQ(messages->acquisinator_raw.debug_adc_raw_u, debug_adc_raw_u);
+  uint16_t debug_adc_raw0_u =
+      msg_signals[ACQUISINATOR_RAW_DEBUG_ADC_RAW0_U].back();
+  EXPECT_EQ(messages->acquisinator_raw.debug_adc_raw0_u, debug_adc_raw0_u);
+  uint16_t debug_adc_raw1_u =
+      msg_signals[ACQUISINATOR_RAW_DEBUG_ADC_RAW1_U].back();
+  EXPECT_EQ(messages->acquisinator_raw.debug_adc_raw1_u, debug_adc_raw1_u);
+  uint16_t debug_adc_raw2_u =
+      msg_signals[ACQUISINATOR_RAW_DEBUG_ADC_RAW2_U].back();
+  EXPECT_EQ(messages->acquisinator_raw.debug_adc_raw2_u, debug_adc_raw2_u);
+  uint8_t debug_seq_u = msg_signals[ACQUISINATOR_RAW_DEBUG_SEQ_U].back();
+  EXPECT_EQ(messages->acquisinator_raw.debug_seq_u, debug_seq_u);
 
   uint64_t timestamp = msg_signals[TIMESTAMP].back();
   EXPECT_EQ(messages->acquisinator_raw.timestamp, timestamp);
@@ -106,8 +125,14 @@ TEST(TestCanAcquisinatorAcquisinatorRaw, CheckTimestampDownsampled) {
 
   CanAcquisinatorMessage *messages = new CanAcquisinatorMessage();
   acquisinator::Pack acquisinator_pack;
-  messages->acquisinator_raw.debug_adc_raw_u =
-      (uint16_t)ACQUISINATOR_ACQUISINATOR_RAW_DEBUG_ADC_RAW_U_MIN;
+  messages->acquisinator_raw.debug_adc_raw0_u =
+      (uint16_t)ACQUISINATOR_ACQUISINATOR_RAW_DEBUG_ADC_RAW0_U_MIN;
+  messages->acquisinator_raw.debug_adc_raw1_u =
+      (uint16_t)ACQUISINATOR_ACQUISINATOR_RAW_DEBUG_ADC_RAW1_U_MIN;
+  messages->acquisinator_raw.debug_adc_raw2_u =
+      (uint16_t)ACQUISINATOR_ACQUISINATOR_RAW_DEBUG_ADC_RAW2_U_MIN;
+  messages->acquisinator_raw.debug_seq_u =
+      (uint8_t)ACQUISINATOR_ACQUISINATOR_RAW_DEBUG_SEQ_U_MIN;
   messages->acquisinator_raw.timestamp = 0;
 
   acquisinator_proto_interface_serialize_from_id(
@@ -116,7 +141,10 @@ TEST(TestCanAcquisinatorAcquisinatorRaw, CheckTimestampDownsampled) {
   acquisinator_proto_interface_deserialize(&acquisinator_pack, circular_buffer,
                                            10);
 
-  EXPECT_TRUE(msg_signals[ACQUISINATOR_RAW_DEBUG_ADC_RAW_U].empty());
+  EXPECT_TRUE(msg_signals[ACQUISINATOR_RAW_DEBUG_ADC_RAW0_U].empty());
+  EXPECT_TRUE(msg_signals[ACQUISINATOR_RAW_DEBUG_ADC_RAW1_U].empty());
+  EXPECT_TRUE(msg_signals[ACQUISINATOR_RAW_DEBUG_ADC_RAW2_U].empty());
+  EXPECT_TRUE(msg_signals[ACQUISINATOR_RAW_DEBUG_SEQ_U].empty());
   EXPECT_TRUE(msg_signals[TIMESTAMP].empty());
 
   delete messages;

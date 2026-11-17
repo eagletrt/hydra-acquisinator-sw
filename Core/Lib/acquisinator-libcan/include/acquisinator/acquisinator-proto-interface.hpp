@@ -25,8 +25,14 @@ void acquisinator_proto_interface_deserialize(acquisinator::Pack *pack,
         last_timestamp = currentMessage.inner_timestamp();
 #endif // LIBCAN_TIMESTAMP
 
-      parseFunc(ACQUISINATOR_RAW, ACQUISINATOR_RAW_DEBUG_ADC_RAW_U,
-                static_cast<double>(currentMessage.debug_adc_raw_u()));
+      parseFunc(ACQUISINATOR_RAW, ACQUISINATOR_RAW_DEBUG_ADC_RAW0_U,
+                static_cast<double>(currentMessage.debug_adc_raw0_u()));
+      parseFunc(ACQUISINATOR_RAW, ACQUISINATOR_RAW_DEBUG_ADC_RAW1_U,
+                static_cast<double>(currentMessage.debug_adc_raw1_u()));
+      parseFunc(ACQUISINATOR_RAW, ACQUISINATOR_RAW_DEBUG_ADC_RAW2_U,
+                static_cast<double>(currentMessage.debug_adc_raw2_u()));
+      parseFunc(ACQUISINATOR_RAW, ACQUISINATOR_RAW_DEBUG_SEQ_U,
+                static_cast<double>(currentMessage.debug_seq_u()));
 
 #ifdef LIBCAN_TIMESTAMP
       parseFunc(ACQUISINATOR_RAW, TIMESTAMP,

@@ -1,0 +1,14 @@
+[project]
+name = "acquisinator-tools"
+version = "0.1.0"
+description = "Bench tools for the hydra acquisinator (CAN logging over a gs_usb transceiver)"
+requires-python = ">=3.10"
+dependencies = [
+    "python-can>=4.4",
+    "gs-usb>=0.3",
+    "pyusb>=1.2",
+    "matplotlib>=3.8",
+]
+
+[tool.uv]
+package = false

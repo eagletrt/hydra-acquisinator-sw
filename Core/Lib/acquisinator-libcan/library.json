@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/platformio/platformio-core/develop/platformio/assets/schema/library.json",
   "name": "acquisinator-libcan-sw",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Can-bus software library for network serialization and deserialization",
   "keywords": ["can-bus", "network", "serialization", "deserialization"],
   "authors": [

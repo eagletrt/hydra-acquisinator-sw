@@ -49,10 +49,10 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, SPI_CS_Pin|USER_LED_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, LTC1865L_CONV_Pin|USER_LED_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : SPI_CS_Pin USER_LED_Pin */
-  GPIO_InitStruct.Pin = SPI_CS_Pin|USER_LED_Pin;
+  /*Configure GPIO pins : LTC1865L_CONV_Pin USER_LED_Pin */
+  GPIO_InitStruct.Pin = LTC1865L_CONV_Pin|USER_LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -61,5 +61,12 @@ void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 2 */
-
+void gpio_ltc1865l_conv(bool high){
+  if(high){
+    HAL_GPIO_WritePin(LTC1865L_CONV_GPIO_Port, LTC1865L_CONV_Pin, GPIO_PIN_SET);
+  }
+  else {
+    HAL_GPIO_WritePin(LTC1865L_CONV_GPIO_Port, LTC1865L_CONV_Pin, GPIO_PIN_RESET);
+  }
+}
 /* USER CODE END 2 */

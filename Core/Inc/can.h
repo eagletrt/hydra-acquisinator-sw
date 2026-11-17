@@ -29,7 +29,7 @@ extern "C" {
 #include "main.h"
 
 /* USER CODE BEGIN Includes */
-
+#include "can-communications.h"
 /* USER CODE END Includes */
 
 extern CAN_HandleTypeDef hcan;
@@ -41,7 +41,9 @@ extern CAN_HandleTypeDef hcan;
 void MX_CAN_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
+void can_start(void);
+enum CanCommunicationReturnCode can_send(const struct CanCommunicationFrame *frame);
+enum CanCommunicationReturnCode can_on_receive(const struct CanCommunicationFrame *frame);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

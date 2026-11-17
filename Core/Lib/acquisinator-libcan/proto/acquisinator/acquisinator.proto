@@ -4,8 +4,11 @@ syntax = "proto3";
 package acquisinator;
 
 message acquisinator_acquisinator_raw {
-  uint32 Debug_adcRaw_U = 1;
-  uint64 inner_timestamp = 2;
+  uint32 Debug_adcRaw0_U = 1;
+  uint32 Debug_adcRaw1_U = 2;
+  uint32 Debug_adcRaw2_U = 3;
+  uint32 Debug_seq_U = 4;
+  uint64 inner_timestamp = 5;
 }
 
 message Pack { repeated acquisinator_acquisinator_raw acquisinator_raw = 1; }

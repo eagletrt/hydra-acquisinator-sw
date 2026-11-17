@@ -30,6 +30,8 @@ extern "C" {
 
 /* USER CODE BEGIN Includes */
 
+#include "ltc1865l.h"
+
 /* USER CODE END Includes */
 
 extern SPI_HandleTypeDef hspi1;
@@ -41,6 +43,8 @@ extern SPI_HandleTypeDef hspi1;
 void MX_SPI1_Init(void);
 
 /* USER CODE BEGIN Prototypes */
+
+enum Ltc1865lReturnCode spi_ltc1865l_transfer(const uint8_t *tx, uint8_t *rx, size_t len);
 
 /* USER CODE END Prototypes */
 

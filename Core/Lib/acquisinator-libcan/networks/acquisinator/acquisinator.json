@@ -12,12 +12,27 @@
       "can_id": 18,
       "length": 8,
       "sender": "Acquisinator",
-      "comment": "One frame per raw ADC sample (amplifier output, CH0).",
+      "comment": "Three consecutive raw ADC samples (amplifier output, CH0), oldest first.",
       "signals": [
         {
-          "name": "Debug_adcRaw_U",
+          "name": "Debug_adcRaw0_U",
           "type": "uint16",
-          "comment": "Raw ADC code (0..65535), not converted to volts."
+          "comment": "Oldest raw ADC code (0..65535), not converted to volts."
+        },
+        {
+          "name": "Debug_adcRaw1_U",
+          "type": "uint16",
+          "comment": "Middle raw ADC code (0..65535), not converted to volts."
+        },
+        {
+          "name": "Debug_adcRaw2_U",
+          "type": "uint16",
+          "comment": "Newest raw ADC code (0..65535), not converted to volts."
+        },
+        {
+          "name": "Debug_seq_U",
+          "type": "uint8",
+          "comment": "Frame counter, wraps at 255: a gap means frames or samples were lost."
         }
       ]
     }

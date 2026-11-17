@@ -18,11 +18,23 @@
 #define CAN_ACQUISINATOR_TEST_UINT64_ZERO (static_cast<uint64_t>(0))
 #define CAN_ACQUISINATOR_TEST_BOOL_ZERO (static_cast<bool>(0))
 
-#define CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_ADC_RAW_U_MIN             \
+#define CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_ADC_RAW0_U_MIN            \
   (CAN_ACQUISINATOR_TEST_UINT16_ZERO)
+#define CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_ADC_RAW1_U_MIN            \
+  (CAN_ACQUISINATOR_TEST_UINT16_ZERO)
+#define CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_ADC_RAW2_U_MIN            \
+  (CAN_ACQUISINATOR_TEST_UINT16_ZERO)
+#define CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_SEQ_U_MIN                 \
+  (CAN_ACQUISINATOR_TEST_UINT8_ZERO)
 
-#define CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_ADC_RAW_U_MAX             \
+#define CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_ADC_RAW0_U_MAX            \
   (static_cast<uint16_t>(65535))
+#define CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_ADC_RAW1_U_MAX            \
+  (static_cast<uint16_t>(65535))
+#define CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_ADC_RAW2_U_MAX            \
+  (static_cast<uint16_t>(65535))
+#define CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_SEQ_U_MAX                 \
+  (static_cast<uint8_t>(255))
 
 TEST(CanAcquisinatorTestIdIsValidTest, AcquisinatorRawIdTest) {
   EXPECT_TRUE(can_acquisinator_api_id_is_valid(
@@ -80,8 +92,14 @@ TEST(CanAcquisinatorTestIdFromIndexTest, CanAcquisinatorTestOverRangeTest) {
 
 TEST(CanAcquisinatorTestSerializeDeserializeTest, AcquisinatorRawMinimum) {
   CanAcquisinatorMessage *u1 = new CanAcquisinatorMessage;
-  u1->acquisinator_raw.debug_adc_raw_u =
-      (uint16_t)CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_ADC_RAW_U_MIN;
+  u1->acquisinator_raw.debug_adc_raw0_u =
+      (uint16_t)CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_ADC_RAW0_U_MIN;
+  u1->acquisinator_raw.debug_adc_raw1_u =
+      (uint16_t)CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_ADC_RAW1_U_MIN;
+  u1->acquisinator_raw.debug_adc_raw2_u =
+      (uint16_t)CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_ADC_RAW2_U_MIN;
+  u1->acquisinator_raw.debug_seq_u =
+      (uint8_t)CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_SEQ_U_MIN;
 
   uint8_t *dst_p = new uint8_t[8];
   (void)can_acquisinator_api_serialize_from_index(
@@ -90,8 +108,13 @@ TEST(CanAcquisinatorTestSerializeDeserializeTest, AcquisinatorRawMinimum) {
   CanAcquisinatorMessage *u2 = new CanAcquisinatorMessage;
   (void)can_acquisinator_api_deserialize_from_index(
       CAN_ACQUISINATOR_MESSAGE_INDEX_ACQUISINATOR_RAW, dst_p, u2);
-  EXPECT_EQ(u1->acquisinator_raw.debug_adc_raw_u,
-            u2->acquisinator_raw.debug_adc_raw_u);
+  EXPECT_EQ(u1->acquisinator_raw.debug_adc_raw0_u,
+            u2->acquisinator_raw.debug_adc_raw0_u);
+  EXPECT_EQ(u1->acquisinator_raw.debug_adc_raw1_u,
+            u2->acquisinator_raw.debug_adc_raw1_u);
+  EXPECT_EQ(u1->acquisinator_raw.debug_adc_raw2_u,
+            u2->acquisinator_raw.debug_adc_raw2_u);
+  EXPECT_EQ(u1->acquisinator_raw.debug_seq_u, u2->acquisinator_raw.debug_seq_u);
 
   delete u2;
   delete[] dst_p;
@@ -99,8 +122,14 @@ TEST(CanAcquisinatorTestSerializeDeserializeTest, AcquisinatorRawMinimum) {
 }
 TEST(CanAcquisinatorTestSerializeDeserializeTest, AcquisinatorRawMaximum) {
   CanAcquisinatorMessage *u1 = new CanAcquisinatorMessage;
-  u1->acquisinator_raw.debug_adc_raw_u =
-      (uint16_t)CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_ADC_RAW_U_MAX;
+  u1->acquisinator_raw.debug_adc_raw0_u =
+      (uint16_t)CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_ADC_RAW0_U_MAX;
+  u1->acquisinator_raw.debug_adc_raw1_u =
+      (uint16_t)CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_ADC_RAW1_U_MAX;
+  u1->acquisinator_raw.debug_adc_raw2_u =
+      (uint16_t)CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_ADC_RAW2_U_MAX;
+  u1->acquisinator_raw.debug_seq_u =
+      (uint8_t)CAN_ACQUISINATOR_TEST_ACQUISINATOR_RAW_DEBUG_SEQ_U_MAX;
 
   uint8_t *dst_p = new uint8_t[8];
   (void)can_acquisinator_api_serialize_from_index(
@@ -109,8 +138,13 @@ TEST(CanAcquisinatorTestSerializeDeserializeTest, AcquisinatorRawMaximum) {
   CanAcquisinatorMessage *u2 = new CanAcquisinatorMessage;
   (void)can_acquisinator_api_deserialize_from_index(
       CAN_ACQUISINATOR_MESSAGE_INDEX_ACQUISINATOR_RAW, dst_p, u2);
-  EXPECT_EQ(u1->acquisinator_raw.debug_adc_raw_u,
-            u2->acquisinator_raw.debug_adc_raw_u);
+  EXPECT_EQ(u1->acquisinator_raw.debug_adc_raw0_u,
+            u2->acquisinator_raw.debug_adc_raw0_u);
+  EXPECT_EQ(u1->acquisinator_raw.debug_adc_raw1_u,
+            u2->acquisinator_raw.debug_adc_raw1_u);
+  EXPECT_EQ(u1->acquisinator_raw.debug_adc_raw2_u,
+            u2->acquisinator_raw.debug_adc_raw2_u);
+  EXPECT_EQ(u1->acquisinator_raw.debug_seq_u, u2->acquisinator_raw.debug_seq_u);
 
   delete u2;
   delete[] dst_p;

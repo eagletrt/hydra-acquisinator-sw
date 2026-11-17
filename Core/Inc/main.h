@@ -53,12 +53,13 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+void dwt_init(void);
+void dwt_delay_us(uint32_t delay_us);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define SPI_CS_Pin GPIO_PIN_3
-#define SPI_CS_GPIO_Port GPIOA
+#define LTC1865L_CONV_Pin GPIO_PIN_3
+#define LTC1865L_CONV_GPIO_Port GPIOA
 #define USER_LED_Pin GPIO_PIN_8
 #define USER_LED_GPIO_Port GPIOA
 

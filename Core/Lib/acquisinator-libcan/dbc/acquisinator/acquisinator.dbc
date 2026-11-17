@@ -37,22 +37,34 @@ BU_: Acquisinator
 
 
 BO_ 18 ACQUISINATOR_RAW: 8 Acquisinator
- SG_ Debug_adcRaw_U : 0|16@1+ (1,0) [0|65535] ""  Vector__XXX
+ SG_ Debug_adcRaw0_U : 0|16@1+ (1,0) [0|65535] ""  Vector__XXX
+ SG_ Debug_adcRaw1_U : 16|16@1+ (1,0) [0|65535] ""  Vector__XXX
+ SG_ Debug_adcRaw2_U : 32|16@1+ (1,0) [0|65535] ""  Vector__XXX
+ SG_ Debug_seq_U : 48|8@1+ (1,0) [0|255] ""  Vector__XXX
 
 
 
 
 CM_ BU_ Acquisinator "Strain gauge acquisition board.";
-CM_ BO_ 18 "One frame per raw ADC sample (amplifier output, CH0).";
-CM_ SG_ 18 Debug_adcRaw_U "Raw ADC code (0..65535), not converted to volts.";
+CM_ BO_ 18 "Three consecutive raw ADC samples (amplifier output, CH0), oldest first.";
+CM_ SG_ 18 Debug_seq_U "Frame counter, wraps at 255: a gap means frames or samples were lost.";
+CM_ SG_ 18 Debug_adcRaw2_U "Newest raw ADC code (0..65535), not converted to volts.";
+CM_ SG_ 18 Debug_adcRaw1_U "Middle raw ADC code (0..65535), not converted to volts.";
+CM_ SG_ 18 Debug_adcRaw0_U "Oldest raw ADC code (0..65535), not converted to volts.";
 BA_DEF_ SG_  "SignalTypeName" STRING ;
 BA_DEF_ SG_  "SignalType" STRING ;
 BA_DEF_ SG_  "Bitfield" STRING ;
 BA_DEF_DEF_  "SignalTypeName" "";
 BA_DEF_DEF_  "SignalType" "";
 BA_DEF_DEF_  "Bitfield" "false";
-BA_ "SignalTypeName" SG_ 18 Debug_adcRaw_U "uint16";
-BA_ "SignalType" SG_ 18 Debug_adcRaw_U "uint";
+BA_ "SignalTypeName" SG_ 18 Debug_seq_U "uint8";
+BA_ "SignalType" SG_ 18 Debug_seq_U "uint";
+BA_ "SignalTypeName" SG_ 18 Debug_adcRaw2_U "uint16";
+BA_ "SignalType" SG_ 18 Debug_adcRaw2_U "uint";
+BA_ "SignalTypeName" SG_ 18 Debug_adcRaw1_U "uint16";
+BA_ "SignalType" SG_ 18 Debug_adcRaw1_U "uint";
+BA_ "SignalTypeName" SG_ 18 Debug_adcRaw0_U "uint16";
+BA_ "SignalType" SG_ 18 Debug_adcRaw0_U "uint";
 
 
 

@@ -57,20 +57,49 @@ constexpr int32_t can_acquisinator_cycle_time_acquisinator_raw = can_oneshot;
 /*!
  * \brief Signals in CAN message: ACQUISINATOR_RAW
  *
- * \details One frame per raw ADC sample (amplifier output, CH0).
+ * \details Three consecutive raw ADC samples (amplifier output, CH0), oldest
+ * first.
  *
  * All signal values are as on the CAN bus.
  */
 struct CAN_PACKING CanAcquisinatorAcquisinatorRaw {
 
   /*!
-   * \brief Debug_adcRaw_U
+   * \brief Debug_adcRaw0_U
    *
-   * \details Raw ADC code (0..65535), not converted to volts.
+   * \details Oldest raw ADC code (0..65535), not converted to volts.
    *
    *  Scale: 1.0, Offset: 0.0
    */
-  uint16_t debug_adc_raw_u;
+  uint16_t debug_adc_raw0_u;
+
+  /*!
+   * \brief Debug_adcRaw1_U
+   *
+   * \details Middle raw ADC code (0..65535), not converted to volts.
+   *
+   *  Scale: 1.0, Offset: 0.0
+   */
+  uint16_t debug_adc_raw1_u;
+
+  /*!
+   * \brief Debug_adcRaw2_U
+   *
+   * \details Newest raw ADC code (0..65535), not converted to volts.
+   *
+   *  Scale: 1.0, Offset: 0.0
+   */
+  uint16_t debug_adc_raw2_u;
+
+  /*!
+   * \brief Debug_seq_U
+   *
+   * \details Frame counter, wraps at 255: a gap means frames or samples were
+   * lost.
+   *
+   *  Scale: 1.0, Offset: 0.0
+   */
+  uint8_t debug_seq_u;
 #ifdef LIBCAN_TIMESTAMP
   uint64_t timestamp;
 #endif
