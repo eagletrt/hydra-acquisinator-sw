@@ -184,7 +184,7 @@ def main() -> None:
     parser.add_argument("--dir", type=Path, default=TOOLS_DIR / "sessions" / "raw", help="cartella dei CSV")
     parser.add_argument("--fs", type=float, default=8000.0,
                         help="campioni/s nello stream: RAW_STREAM_SAMPLE_RATE_HZ / RAW_STREAM_CAN_DECIMATION")
-    parser.add_argument("--vref", type=float, default=3.29, help="riferimento dell'ADC per la colonna adc_v [V]")
+    parser.add_argument("--vref", type=float, default=3.0, help="riferimento dell'ADC (AD1583, 3.000 V) per la colonna adc_v [V]")
     parser.add_argument("--duration", type=float, default=None, help="ferma la registrazione dopo questi secondi")
     parser.add_argument("--no-plot", action="store_true", help="solo registrazione, senza finestra")
     args = parser.parse_args()
