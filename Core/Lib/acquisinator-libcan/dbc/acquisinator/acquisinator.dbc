@@ -42,6 +42,17 @@ BO_ 18 ACQUISINATOR_RAW: 8 Acquisinator
  SG_ Debug_adcRaw2_U : 32|16@1+ (1,0) [0|65535] ""  Vector__XXX
  SG_ Debug_seq_U : 48|8@1+ (1,0) [0|255] ""  Vector__XXX
 
+BO_ 19 ACQUISINATOR_LOCKIN: 8 Acquisinator
+ SG_ Lockin_inPhase : 0|32@1- (0.0001,0) [-214748.3648|214748.3647] "counts"  Vector__XXX
+ SG_ Lockin_quadrature : 32|32@1- (0.0001,0) [-214748.3648|214748.3647] "counts"  Vector__XXX
+
+BO_ 20 ACQUISINATOR_LOCKIN_STATUS: 8 Acquisinator
+ SG_ Lockin_dc_U : 0|16@1+ (1,0) [0|65535] ""  Vector__XXX
+ SG_ Lockin_min_U : 16|16@1+ (1,0) [0|65535] ""  Vector__XXX
+ SG_ Lockin_max_U : 32|16@1+ (1,0) [0|65535] ""  Vector__XXX
+ SG_ Lockin_spiError_B : 48|1@1+ (1,0) [0|0] ""  Vector__XXX
+ SG_ Lockin_seq_U : 49|8@1+ (1,0) [0|255] ""  Vector__XXX
+
 
 
 
@@ -51,6 +62,15 @@ CM_ SG_ 18 Debug_seq_U "Frame counter, wraps at 255: a gap means frames or sampl
 CM_ SG_ 18 Debug_adcRaw2_U "Newest raw ADC code (0..65535), not converted to volts.";
 CM_ SG_ 18 Debug_adcRaw1_U "Middle raw ADC code (0..65535), not converted to volts.";
 CM_ SG_ 18 Debug_adcRaw0_U "Oldest raw ADC code (0..65535), not converted to volts.";
+CM_ BO_ 19 "Lock-in result of the last demodulation window, in raw ADC counts (peak). Sent together with ACQUISINATOR_LOCKIN_STATUS.";
+CM_ SG_ 19 Lockin_quadrature "Quadrature amplitude Q = A*sin(phi), ADC counts (peak).";
+CM_ SG_ 19 Lockin_inPhase "In-phase amplitude I = A*cos(phi) of the amplifier output at the excitation frequency, ADC counts (peak).";
+CM_ BO_ 20 "Statistics of the same window as ACQUISINATOR_LOCKIN, raw ADC counts.";
+CM_ SG_ 20 Lockin_seq_U "Result counter, wraps at 255: a gap means results were lost.";
+CM_ SG_ 20 Lockin_spiError_B "An SPI read failed since the previous result: the window was restarted.";
+CM_ SG_ 20 Lockin_max_U "Largest sample in the window, ADC counts (clipping check).";
+CM_ SG_ 20 Lockin_min_U "Smallest sample in the window, ADC counts (clipping check).";
+CM_ SG_ 20 Lockin_dc_U "Mean amplifier output over the window, ADC counts.";
 BA_DEF_ SG_  "SignalTypeName" STRING ;
 BA_DEF_ SG_  "SignalType" STRING ;
 BA_DEF_ SG_  "Bitfield" STRING ;
@@ -65,6 +85,16 @@ BA_ "SignalTypeName" SG_ 18 Debug_adcRaw1_U "uint16";
 BA_ "SignalType" SG_ 18 Debug_adcRaw1_U "uint";
 BA_ "SignalTypeName" SG_ 18 Debug_adcRaw0_U "uint16";
 BA_ "SignalType" SG_ 18 Debug_adcRaw0_U "uint";
+BA_ "SignalTypeName" SG_ 20 Lockin_seq_U "uint8";
+BA_ "SignalType" SG_ 20 Lockin_seq_U "uint";
+BA_ "SignalTypeName" SG_ 20 Lockin_spiError_B "bool";
+BA_ "SignalType" SG_ 20 Lockin_spiError_B "bool";
+BA_ "SignalTypeName" SG_ 20 Lockin_max_U "uint16";
+BA_ "SignalType" SG_ 20 Lockin_max_U "uint";
+BA_ "SignalTypeName" SG_ 20 Lockin_min_U "uint16";
+BA_ "SignalType" SG_ 20 Lockin_min_U "uint";
+BA_ "SignalTypeName" SG_ 20 Lockin_dc_U "uint16";
+BA_ "SignalType" SG_ 20 Lockin_dc_U "uint";
 
 
 

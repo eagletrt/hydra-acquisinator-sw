@@ -10,9 +10,8 @@
  *     kept samples form a batch that the main loop turns into one
  *     ACQUISINATOR_RAW frame (oldest sample first, plus a sequence counter).
  *
- *     The two rates of the system are set here and nowhere else:
- *       - RAW_STREAM_SAMPLE_RATE_HZ   ADC sampling rate (drives TIM2)
- *       - RAW_STREAM_CAN_DECIMATION   keep 1 sample every N (1 = all)
+ *     The stream taps the lock-in samples, so its rate is LOCKIN_SAMPLE_RATE_HZ;
+ *     RAW_STREAM_CAN_DECIMATION keeps 1 sample every N (1 = all).
  *     CAN frame rate = RAW_STREAM_SAMPLE_RATE_HZ / RAW_STREAM_CAN_DECIMATION / 3.
  */
 
@@ -21,12 +20,12 @@
 
 #include <stdint.h>
 
+#include "lockin.h"
+
 /*!
- * \brief ADC sampling rate, in Hz.
- *
- * \details TIM2 ticks at 1 MHz, so any divisor of 1 000 000 is exact.
+ * \brief ADC sampling rate, in Hz: the lock-in drives the sampling.
  */
-#define RAW_STREAM_SAMPLE_RATE_HZ (8000U)
+#define RAW_STREAM_SAMPLE_RATE_HZ LOCKIN_SAMPLE_RATE_HZ
 
 /*!
  * \brief Keep one sample every N for the CAN stream (1 = every sample).

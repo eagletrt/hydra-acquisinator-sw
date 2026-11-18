@@ -28,6 +28,18 @@
 #define ACQUISINATOR_ACQUISINATOR_RAW_DEBUG_ADC_RAW2_U_MIN                     \
   (ACQUISINATOR_UINT16_ZERO)
 #define ACQUISINATOR_ACQUISINATOR_RAW_DEBUG_SEQ_U_MIN (ACQUISINATOR_UINT8_ZERO)
+#define ACQUISINATOR_ACQUISINATOR_LOCKIN_LOCKIN_INPHASE_MIN (-214748.3648f)
+#define ACQUISINATOR_ACQUISINATOR_LOCKIN_LOCKIN_QUADRATURE_MIN (-214748.3648f)
+#define ACQUISINATOR_ACQUISINATOR_LOCKIN_STATUS_LOCKIN_DC_U_MIN                \
+  (ACQUISINATOR_UINT16_ZERO)
+#define ACQUISINATOR_ACQUISINATOR_LOCKIN_STATUS_LOCKIN_MIN_U_MIN               \
+  (ACQUISINATOR_UINT16_ZERO)
+#define ACQUISINATOR_ACQUISINATOR_LOCKIN_STATUS_LOCKIN_MAX_U_MIN               \
+  (ACQUISINATOR_UINT16_ZERO)
+#define ACQUISINATOR_ACQUISINATOR_LOCKIN_STATUS_LOCKIN_SPI_ERROR_B_MIN         \
+  (ACQUISINATOR_BOOL_ZERO)
+#define ACQUISINATOR_ACQUISINATOR_LOCKIN_STATUS_LOCKIN_SEQ_U_MIN               \
+  (ACQUISINATOR_UINT8_ZERO)
 
 typedef std::unordered_map<std::string, std::vector<double>> message_signals;
 typedef std::unordered_map<std::string, std::vector<uint64_t>> message_enums;
@@ -145,6 +157,177 @@ TEST(TestCanAcquisinatorAcquisinatorRaw, CheckTimestampDownsampled) {
   EXPECT_TRUE(msg_signals[ACQUISINATOR_RAW_DEBUG_ADC_RAW1_U].empty());
   EXPECT_TRUE(msg_signals[ACQUISINATOR_RAW_DEBUG_ADC_RAW2_U].empty());
   EXPECT_TRUE(msg_signals[ACQUISINATOR_RAW_DEBUG_SEQ_U].empty());
+  EXPECT_TRUE(msg_signals[TIMESTAMP].empty());
+
+  delete messages;
+}
+
+TEST(TestCanAcquisinatorAcquisinatorLockin, CheckSerializeDeserialize) {
+  network_enums net_enums;
+  network_signals net_signals;
+  network_strings net_strings;
+
+  message_enums &msg_enums = net_enums[ACQUISINATOR_LOCKIN];
+  message_signals &msg_signals = net_signals[ACQUISINATOR_LOCKIN];
+  message_strings &msg_strings = net_strings[ACQUISINATOR_LOCKIN];
+
+  DummyCircularBuffer circular_buffer{net_enums, net_signals, net_strings};
+
+  char buffer[1024];
+
+  CanAcquisinatorMessage *messages = new CanAcquisinatorMessage();
+  acquisinator::Pack acquisinator_pack;
+  messages->acquisinator_lockin.lockin_inphase =
+      (float)ACQUISINATOR_ACQUISINATOR_LOCKIN_LOCKIN_INPHASE_MIN;
+  messages->acquisinator_lockin.lockin_quadrature =
+      (float)ACQUISINATOR_ACQUISINATOR_LOCKIN_LOCKIN_QUADRATURE_MIN;
+  messages->acquisinator_lockin.timestamp = 0;
+
+  acquisinator_proto_interface_serialize_from_id(
+      CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_LOCKIN, &acquisinator_pack,
+      messages);
+  acquisinator_proto_interface_deserialize(&acquisinator_pack, circular_buffer,
+                                           0);
+  float lockin_inphase = msg_signals[ACQUISINATOR_LOCKIN_LOCKIN_INPHASE].back();
+  EXPECT_EQ(messages->acquisinator_lockin.lockin_inphase, lockin_inphase);
+  float lockin_quadrature =
+      msg_signals[ACQUISINATOR_LOCKIN_LOCKIN_QUADRATURE].back();
+  EXPECT_EQ(messages->acquisinator_lockin.lockin_quadrature, lockin_quadrature);
+
+  uint64_t timestamp = msg_signals[TIMESTAMP].back();
+  EXPECT_EQ(messages->acquisinator_lockin.timestamp, timestamp);
+
+  delete messages;
+}
+
+TEST(TestCanAcquisinatorAcquisinatorLockin, CheckTimestampDownsampled) {
+  network_enums net_enums;
+  network_signals net_signals;
+  network_strings net_strings;
+
+  message_enums &msg_enums = net_enums[ACQUISINATOR_LOCKIN];
+  message_signals &msg_signals = net_signals[ACQUISINATOR_LOCKIN];
+  message_strings &msg_strings = net_strings[ACQUISINATOR_LOCKIN];
+
+  DummyCircularBuffer circular_buffer{net_enums, net_signals, net_strings};
+
+  char buffer[1024];
+
+  CanAcquisinatorMessage *messages = new CanAcquisinatorMessage();
+  acquisinator::Pack acquisinator_pack;
+  messages->acquisinator_lockin.lockin_inphase =
+      (float)ACQUISINATOR_ACQUISINATOR_LOCKIN_LOCKIN_INPHASE_MIN;
+  messages->acquisinator_lockin.lockin_quadrature =
+      (float)ACQUISINATOR_ACQUISINATOR_LOCKIN_LOCKIN_QUADRATURE_MIN;
+  messages->acquisinator_lockin.timestamp = 0;
+
+  acquisinator_proto_interface_serialize_from_id(
+      CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_LOCKIN, &acquisinator_pack,
+      messages);
+  acquisinator_proto_interface_deserialize(&acquisinator_pack, circular_buffer,
+                                           10);
+
+  EXPECT_TRUE(msg_signals[ACQUISINATOR_LOCKIN_LOCKIN_INPHASE].empty());
+  EXPECT_TRUE(msg_signals[ACQUISINATOR_LOCKIN_LOCKIN_QUADRATURE].empty());
+  EXPECT_TRUE(msg_signals[TIMESTAMP].empty());
+
+  delete messages;
+}
+
+TEST(TestCanAcquisinatorAcquisinatorLockinStatus, CheckSerializeDeserialize) {
+  network_enums net_enums;
+  network_signals net_signals;
+  network_strings net_strings;
+
+  message_enums &msg_enums = net_enums[ACQUISINATOR_LOCKIN_STATUS];
+  message_signals &msg_signals = net_signals[ACQUISINATOR_LOCKIN_STATUS];
+  message_strings &msg_strings = net_strings[ACQUISINATOR_LOCKIN_STATUS];
+
+  DummyCircularBuffer circular_buffer{net_enums, net_signals, net_strings};
+
+  char buffer[1024];
+
+  CanAcquisinatorMessage *messages = new CanAcquisinatorMessage();
+  acquisinator::Pack acquisinator_pack;
+  messages->acquisinator_lockin_status.lockin_dc_u =
+      (uint16_t)ACQUISINATOR_ACQUISINATOR_LOCKIN_STATUS_LOCKIN_DC_U_MIN;
+  messages->acquisinator_lockin_status.lockin_min_u =
+      (uint16_t)ACQUISINATOR_ACQUISINATOR_LOCKIN_STATUS_LOCKIN_MIN_U_MIN;
+  messages->acquisinator_lockin_status.lockin_max_u =
+      (uint16_t)ACQUISINATOR_ACQUISINATOR_LOCKIN_STATUS_LOCKIN_MAX_U_MIN;
+  messages->acquisinator_lockin_status.lockin_spi_error_b =
+      (bool)ACQUISINATOR_ACQUISINATOR_LOCKIN_STATUS_LOCKIN_SPI_ERROR_B_MIN;
+  messages->acquisinator_lockin_status.lockin_seq_u =
+      (uint8_t)ACQUISINATOR_ACQUISINATOR_LOCKIN_STATUS_LOCKIN_SEQ_U_MIN;
+  messages->acquisinator_lockin_status.timestamp = 0;
+
+  acquisinator_proto_interface_serialize_from_id(
+      CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_LOCKIN_STATUS,
+      &acquisinator_pack, messages);
+  acquisinator_proto_interface_deserialize(&acquisinator_pack, circular_buffer,
+                                           0);
+  uint16_t lockin_dc_u =
+      msg_signals[ACQUISINATOR_LOCKIN_STATUS_LOCKIN_DC_U].back();
+  EXPECT_EQ(messages->acquisinator_lockin_status.lockin_dc_u, lockin_dc_u);
+  uint16_t lockin_min_u =
+      msg_signals[ACQUISINATOR_LOCKIN_STATUS_LOCKIN_MIN_U].back();
+  EXPECT_EQ(messages->acquisinator_lockin_status.lockin_min_u, lockin_min_u);
+  uint16_t lockin_max_u =
+      msg_signals[ACQUISINATOR_LOCKIN_STATUS_LOCKIN_MAX_U].back();
+  EXPECT_EQ(messages->acquisinator_lockin_status.lockin_max_u, lockin_max_u);
+  bool lockin_spi_error_b =
+      msg_signals[ACQUISINATOR_LOCKIN_STATUS_LOCKIN_SPI_ERROR_B].back();
+  EXPECT_EQ(messages->acquisinator_lockin_status.lockin_spi_error_b,
+            lockin_spi_error_b);
+  uint8_t lockin_seq_u =
+      msg_signals[ACQUISINATOR_LOCKIN_STATUS_LOCKIN_SEQ_U].back();
+  EXPECT_EQ(messages->acquisinator_lockin_status.lockin_seq_u, lockin_seq_u);
+
+  uint64_t timestamp = msg_signals[TIMESTAMP].back();
+  EXPECT_EQ(messages->acquisinator_lockin_status.timestamp, timestamp);
+
+  delete messages;
+}
+
+TEST(TestCanAcquisinatorAcquisinatorLockinStatus, CheckTimestampDownsampled) {
+  network_enums net_enums;
+  network_signals net_signals;
+  network_strings net_strings;
+
+  message_enums &msg_enums = net_enums[ACQUISINATOR_LOCKIN_STATUS];
+  message_signals &msg_signals = net_signals[ACQUISINATOR_LOCKIN_STATUS];
+  message_strings &msg_strings = net_strings[ACQUISINATOR_LOCKIN_STATUS];
+
+  DummyCircularBuffer circular_buffer{net_enums, net_signals, net_strings};
+
+  char buffer[1024];
+
+  CanAcquisinatorMessage *messages = new CanAcquisinatorMessage();
+  acquisinator::Pack acquisinator_pack;
+  messages->acquisinator_lockin_status.lockin_dc_u =
+      (uint16_t)ACQUISINATOR_ACQUISINATOR_LOCKIN_STATUS_LOCKIN_DC_U_MIN;
+  messages->acquisinator_lockin_status.lockin_min_u =
+      (uint16_t)ACQUISINATOR_ACQUISINATOR_LOCKIN_STATUS_LOCKIN_MIN_U_MIN;
+  messages->acquisinator_lockin_status.lockin_max_u =
+      (uint16_t)ACQUISINATOR_ACQUISINATOR_LOCKIN_STATUS_LOCKIN_MAX_U_MIN;
+  messages->acquisinator_lockin_status.lockin_spi_error_b =
+      (bool)ACQUISINATOR_ACQUISINATOR_LOCKIN_STATUS_LOCKIN_SPI_ERROR_B_MIN;
+  messages->acquisinator_lockin_status.lockin_seq_u =
+      (uint8_t)ACQUISINATOR_ACQUISINATOR_LOCKIN_STATUS_LOCKIN_SEQ_U_MIN;
+  messages->acquisinator_lockin_status.timestamp = 0;
+
+  acquisinator_proto_interface_serialize_from_id(
+      CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_LOCKIN_STATUS,
+      &acquisinator_pack, messages);
+  acquisinator_proto_interface_deserialize(&acquisinator_pack, circular_buffer,
+                                           10);
+
+  EXPECT_TRUE(msg_signals[ACQUISINATOR_LOCKIN_STATUS_LOCKIN_DC_U].empty());
+  EXPECT_TRUE(msg_signals[ACQUISINATOR_LOCKIN_STATUS_LOCKIN_MIN_U].empty());
+  EXPECT_TRUE(msg_signals[ACQUISINATOR_LOCKIN_STATUS_LOCKIN_MAX_U].empty());
+  EXPECT_TRUE(
+      msg_signals[ACQUISINATOR_LOCKIN_STATUS_LOCKIN_SPI_ERROR_B].empty());
+  EXPECT_TRUE(msg_signals[ACQUISINATOR_LOCKIN_STATUS_LOCKIN_SEQ_U].empty());
   EXPECT_TRUE(msg_signals[TIMESTAMP].empty());
 
   delete messages;

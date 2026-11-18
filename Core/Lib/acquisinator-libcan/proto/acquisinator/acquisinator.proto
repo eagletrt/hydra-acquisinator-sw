@@ -11,4 +11,24 @@ message acquisinator_acquisinator_raw {
   uint64 inner_timestamp = 5;
 }
 
-message Pack { repeated acquisinator_acquisinator_raw acquisinator_raw = 1; }
+message acquisinator_acquisinator_lockin {
+  float Lockin_inPhase = 1;
+  float Lockin_quadrature = 2;
+  uint64 inner_timestamp = 3;
+}
+
+message acquisinator_acquisinator_lockin_status {
+  uint32 Lockin_dc_U = 1;
+  uint32 Lockin_min_U = 2;
+  uint32 Lockin_max_U = 3;
+  bool Lockin_spiError_B = 4;
+  uint32 Lockin_seq_U = 5;
+  uint64 inner_timestamp = 6;
+}
+
+message Pack {
+  repeated acquisinator_acquisinator_raw acquisinator_raw = 1;
+  repeated acquisinator_acquisinator_lockin acquisinator_lockin = 2;
+  repeated acquisinator_acquisinator_lockin_status acquisinator_lockin_status =
+      3;
+}

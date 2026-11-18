@@ -40,6 +40,65 @@ void acquisinator_proto_interface_deserialize(acquisinator::Pack *pack,
 #endif // LIBCAN_TIMESTAMP
     }
   }
+  if (pack->acquisinator_lockin_size() != 0) {
+
+    for (int i = 0; i < pack->acquisinator_lockin_size(); i++) {
+      const acquisinator::acquisinator_acquisinator_lockin &currentMessage =
+          pack->acquisinator_lockin(i);
+#ifdef LIBCAN_TIMESTAMP
+      static uint64_t last_timestamp = 0;
+      if (currentMessage.inner_timestamp() - last_timestamp < resample_us)
+        continue;
+      else
+        last_timestamp = currentMessage.inner_timestamp();
+#endif // LIBCAN_TIMESTAMP
+
+      parseFunc(ACQUISINATOR_LOCKIN, ACQUISINATOR_LOCKIN_LOCKIN_INPHASE,
+                static_cast<double>(currentMessage.lockin_inphase()));
+      parseFunc(ACQUISINATOR_LOCKIN, ACQUISINATOR_LOCKIN_LOCKIN_QUADRATURE,
+                static_cast<double>(currentMessage.lockin_quadrature()));
+
+#ifdef LIBCAN_TIMESTAMP
+      parseFunc(ACQUISINATOR_LOCKIN, TIMESTAMP,
+                static_cast<double>(currentMessage.inner_timestamp()));
+#endif // LIBCAN_TIMESTAMP
+    }
+  }
+  if (pack->acquisinator_lockin_status_size() != 0) {
+
+    for (int i = 0; i < pack->acquisinator_lockin_status_size(); i++) {
+      const acquisinator::acquisinator_acquisinator_lockin_status
+          &currentMessage = pack->acquisinator_lockin_status(i);
+#ifdef LIBCAN_TIMESTAMP
+      static uint64_t last_timestamp = 0;
+      if (currentMessage.inner_timestamp() - last_timestamp < resample_us)
+        continue;
+      else
+        last_timestamp = currentMessage.inner_timestamp();
+#endif // LIBCAN_TIMESTAMP
+
+      parseFunc(ACQUISINATOR_LOCKIN_STATUS,
+                ACQUISINATOR_LOCKIN_STATUS_LOCKIN_DC_U,
+                static_cast<double>(currentMessage.lockin_dc_u()));
+      parseFunc(ACQUISINATOR_LOCKIN_STATUS,
+                ACQUISINATOR_LOCKIN_STATUS_LOCKIN_MIN_U,
+                static_cast<double>(currentMessage.lockin_min_u()));
+      parseFunc(ACQUISINATOR_LOCKIN_STATUS,
+                ACQUISINATOR_LOCKIN_STATUS_LOCKIN_MAX_U,
+                static_cast<double>(currentMessage.lockin_max_u()));
+      parseFunc(ACQUISINATOR_LOCKIN_STATUS,
+                ACQUISINATOR_LOCKIN_STATUS_LOCKIN_SPI_ERROR_B,
+                static_cast<double>(currentMessage.lockin_spi_error_b()));
+      parseFunc(ACQUISINATOR_LOCKIN_STATUS,
+                ACQUISINATOR_LOCKIN_STATUS_LOCKIN_SEQ_U,
+                static_cast<double>(currentMessage.lockin_seq_u()));
+
+#ifdef LIBCAN_TIMESTAMP
+      parseFunc(ACQUISINATOR_LOCKIN_STATUS, TIMESTAMP,
+                static_cast<double>(currentMessage.inner_timestamp()));
+#endif // LIBCAN_TIMESTAMP
+    }
+  }
 }
 
 void acquisinator_proto_interface_serialize_from_id(

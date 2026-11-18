@@ -22,6 +22,23 @@ extern "C" {
 #define ACQUISINATOR_RAW_DEBUG_SEQ_U "debug_seq_u"
 /* END */
 
+/* START */
+#define ACQUISINATOR_LOCKIN "ACQUISINATOR_LOCKIN"
+
+#define ACQUISINATOR_LOCKIN_LOCKIN_INPHASE "lockin_inphase"
+#define ACQUISINATOR_LOCKIN_LOCKIN_QUADRATURE "lockin_quadrature"
+/* END */
+
+/* START */
+#define ACQUISINATOR_LOCKIN_STATUS "ACQUISINATOR_LOCKIN_STATUS"
+
+#define ACQUISINATOR_LOCKIN_STATUS_LOCKIN_DC_U "lockin_dc_u"
+#define ACQUISINATOR_LOCKIN_STATUS_LOCKIN_MIN_U "lockin_min_u"
+#define ACQUISINATOR_LOCKIN_STATUS_LOCKIN_MAX_U "lockin_max_u"
+#define ACQUISINATOR_LOCKIN_STATUS_LOCKIN_SPI_ERROR_B "lockin_spi_error_b"
+#define ACQUISINATOR_LOCKIN_STATUS_LOCKIN_SEQ_U "lockin_seq_u"
+/* END */
+
 /* START CANLIB UNKNOWN */
 #define CANLIB_UNKNOWN "CANLIB_UNKNOWN"
 /* END CANLIB UNKNOWN */
@@ -34,8 +51,10 @@ extern "C" {
 /* END MUX MESSAGES ID */
 enum acquisinator_types_id {
 
-  e_acquisinator_uint16_t = -2,
+  e_acquisinator_uint16_t = -4,
   e_acquisinator_uint8_t,
+  e_acquisinator_float,
+  e_acquisinator_bool,
 
 };
 
@@ -150,6 +169,74 @@ int acquisinator_acquisinator_raw_fields(char *buffer);
  * \return the written number of bytes, negative value on error
  */
 int acquisinator_acquisinator_raw_fields_file(FILE *buffer);
+
+/*!
+ * \brief parse message fields to a string given a message
+ * \param[in] the message to be parsed
+ * \param[out] string buffer that contains the string output
+ * \return the written number of bytes, negative value on error
+ */
+int acquisinator_acquisinator_lockin_to_string(
+    struct CanAcquisinatorAcquisinatorLockin message, char *buffer);
+
+/*!
+ * \brief parse message fields to a file descriptor given a message
+ * \param[in] the message to be parsed
+ * \param[out] file descriptor that contains the string output
+ * \return the written number of bytes, negative value on error
+ */
+int acquisinator_acquisinator_lockin_to_string_file(
+    struct CanAcquisinatorAcquisinatorLockin message, FILE *buffer);
+
+/*!
+ * \brief parse message fields to a string given a message
+ * \param[in] the message to be parsed
+ * \param[out] string buffer that contains the string output
+ * \return the written number of bytes, negative value on error
+ */
+int acquisinator_acquisinator_lockin_fields(char *buffer);
+
+/*!
+ * \brief parse message fields to a file descriptor given a message
+ * \param[in] the message to be parsed
+ * \param[out] file descriptor that contains the string output
+ * \return the written number of bytes, negative value on error
+ */
+int acquisinator_acquisinator_lockin_fields_file(FILE *buffer);
+
+/*!
+ * \brief parse message fields to a string given a message
+ * \param[in] the message to be parsed
+ * \param[out] string buffer that contains the string output
+ * \return the written number of bytes, negative value on error
+ */
+int acquisinator_acquisinator_lockin_status_to_string(
+    struct CanAcquisinatorAcquisinatorLockinStatus message, char *buffer);
+
+/*!
+ * \brief parse message fields to a file descriptor given a message
+ * \param[in] the message to be parsed
+ * \param[out] file descriptor that contains the string output
+ * \return the written number of bytes, negative value on error
+ */
+int acquisinator_acquisinator_lockin_status_to_string_file(
+    struct CanAcquisinatorAcquisinatorLockinStatus message, FILE *buffer);
+
+/*!
+ * \brief parse message fields to a string given a message
+ * \param[in] the message to be parsed
+ * \param[out] string buffer that contains the string output
+ * \return the written number of bytes, negative value on error
+ */
+int acquisinator_acquisinator_lockin_status_fields(char *buffer);
+
+/*!
+ * \brief parse message fields to a file descriptor given a message
+ * \param[in] the message to be parsed
+ * \param[out] file descriptor that contains the string output
+ * \return the written number of bytes, negative value on error
+ */
+int acquisinator_acquisinator_lockin_status_fields_file(FILE *buffer);
 
 /*!
  * \brief put signal names of messages in a string given a specific message id

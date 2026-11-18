@@ -35,6 +35,67 @@
           "comment": "Frame counter, wraps at 255: a gap means frames or samples were lost."
         }
       ]
+    },
+    {
+      "name": "ACQUISINATOR_LOCKIN",
+      "can_id": 19,
+      "length": 8,
+      "sender": "Acquisinator",
+      "comment": "Lock-in result of the last demodulation window, in raw ADC counts (peak). Sent together with ACQUISINATOR_LOCKIN_STATUS.",
+      "signals": [
+        {
+          "name": "Lockin_inPhase",
+          "comment": "In-phase amplitude I = A*cos(phi) of the amplifier output at the excitation frequency, ADC counts (peak).",
+          "length": 32,
+          "signed": true,
+          "scale": 0.0001,
+          "offset": 0,
+          "unit": "counts"
+        },
+        {
+          "name": "Lockin_quadrature",
+          "comment": "Quadrature amplitude Q = A*sin(phi), ADC counts (peak).",
+          "length": 32,
+          "signed": true,
+          "scale": 0.0001,
+          "offset": 0,
+          "unit": "counts"
+        }
+      ]
+    },
+    {
+      "name": "ACQUISINATOR_LOCKIN_STATUS",
+      "can_id": 20,
+      "length": 8,
+      "sender": "Acquisinator",
+      "comment": "Statistics of the same window as ACQUISINATOR_LOCKIN, raw ADC counts.",
+      "signals": [
+        {
+          "name": "Lockin_dc_U",
+          "type": "uint16",
+          "comment": "Mean amplifier output over the window, ADC counts."
+        },
+        {
+          "name": "Lockin_min_U",
+          "type": "uint16",
+          "comment": "Smallest sample in the window, ADC counts (clipping check)."
+        },
+        {
+          "name": "Lockin_max_U",
+          "type": "uint16",
+          "comment": "Largest sample in the window, ADC counts (clipping check)."
+        },
+        {
+          "name": "Lockin_spiError_B",
+          "type": "bool",
+          "comment": "An SPI read failed since the previous result: the window was restarted."
+        },
+        {
+          "name": "Lockin_seq_U",
+          "type": "uint8",
+          "comment": "Result counter, wraps at 255: a gap means results were lost."
+        }
+      ]
     }
   ]
 }

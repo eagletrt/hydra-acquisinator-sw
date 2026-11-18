@@ -42,6 +42,9 @@ void MX_DAC1_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 
+void dac_excitation_start(uint16_t code);
+void dac_excitation_write(uint16_t code);
+
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

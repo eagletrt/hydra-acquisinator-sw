@@ -20,7 +20,9 @@ extern "C" {
  *  @{ */
 enum CanAcquisinatorMessageIndex : int8_t {
   CAN_ACQUISINATOR_MESSAGE_INDEX_ACQUISINATOR_RAW = 0,
-  CAN_ACQUISINATOR_MESSAGE_COUNT = 1,
+  CAN_ACQUISINATOR_MESSAGE_INDEX_ACQUISINATOR_LOCKIN = 1,
+  CAN_ACQUISINATOR_MESSAGE_INDEX_ACQUISINATOR_LOCKIN_STATUS = 2,
+  CAN_ACQUISINATOR_MESSAGE_COUNT = 3,
   CAN_ACQUISINATOR_MESSAGE_INDEX_INVALID = -1,
 };
 
@@ -31,6 +33,8 @@ enum CanAcquisinatorMessageIndex : int8_t {
  *  @{ */
 enum CanAcquisinatorMessageFrameId : int16_t {
   CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_RAW = 0x12,
+  CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_LOCKIN = 0x13,
+  CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_LOCKIN_STATUS = 0x14,
   CAN_ACQUISINATOR_MESSAGE_FRAME_ID_INVALID = -1,
 };
 
@@ -40,6 +44,8 @@ enum CanAcquisinatorMessageFrameId : int16_t {
  *  \brief Message lengths in bytes.
  *  @{ */
 constexpr uint8_t can_acquisinator_byte_size_acquisinator_raw = 8U;
+constexpr uint8_t can_acquisinator_byte_size_acquisinator_lockin = 8U;
+constexpr uint8_t can_acquisinator_byte_size_acquisinator_lockin_status = 8U;
 
 /*! @} */
 
@@ -47,6 +53,9 @@ constexpr uint8_t can_acquisinator_byte_size_acquisinator_raw = 8U;
  *  \brief Frame periodicity in milliseconds.
  *  @{ */
 constexpr int32_t can_acquisinator_cycle_time_acquisinator_raw = can_oneshot;
+constexpr int32_t can_acquisinator_cycle_time_acquisinator_lockin = can_oneshot;
+constexpr int32_t can_acquisinator_cycle_time_acquisinator_lockin_status =
+    can_oneshot;
 
 /*! @} */
 
@@ -105,11 +114,106 @@ struct CAN_PACKING CanAcquisinatorAcquisinatorRaw {
 #endif
 };
 
+/*!
+ * \brief Signals in CAN message: ACQUISINATOR_LOCKIN
+ *
+ * \details Lock-in result of the last demodulation window, in raw ADC counts
+ * (peak). Sent together with ACQUISINATOR_LOCKIN_STATUS.
+ *
+ * All signal values are as on the CAN bus.
+ */
+struct CAN_PACKING CanAcquisinatorAcquisinatorLockin {
+
+  /*!
+   * \brief Lockin_inPhase
+   *
+   * \details In-phase amplitude I = A*cos(phi) of the amplifier output at the
+   * excitation frequency, ADC counts (peak). [counts]
+   *
+   *  Scale: 0.0001, Offset: 0.0
+   */
+  float lockin_inphase;
+
+  /*!
+   * \brief Lockin_quadrature
+   *
+   * \details Quadrature amplitude Q = A*sin(phi), ADC counts (peak). [counts]
+   *
+   *  Scale: 0.0001, Offset: 0.0
+   */
+  float lockin_quadrature;
+#ifdef LIBCAN_TIMESTAMP
+  uint64_t timestamp;
+#endif
+};
+
+/*!
+ * \brief Signals in CAN message: ACQUISINATOR_LOCKIN_STATUS
+ *
+ * \details Statistics of the same window as ACQUISINATOR_LOCKIN, raw ADC
+ * counts.
+ *
+ * All signal values are as on the CAN bus.
+ */
+struct CAN_PACKING CanAcquisinatorAcquisinatorLockinStatus {
+
+  /*!
+   * \brief Lockin_dc_U
+   *
+   * \details Mean amplifier output over the window, ADC counts.
+   *
+   *  Scale: 1.0, Offset: 0.0
+   */
+  uint16_t lockin_dc_u;
+
+  /*!
+   * \brief Lockin_min_U
+   *
+   * \details Smallest sample in the window, ADC counts (clipping check).
+   *
+   *  Scale: 1.0, Offset: 0.0
+   */
+  uint16_t lockin_min_u;
+
+  /*!
+   * \brief Lockin_max_U
+   *
+   * \details Largest sample in the window, ADC counts (clipping check).
+   *
+   *  Scale: 1.0, Offset: 0.0
+   */
+  uint16_t lockin_max_u;
+
+  /*!
+   * \brief Lockin_spiError_B
+   *
+   * \details An SPI read failed since the previous result: the window was
+   * restarted.
+   *
+   *  Scale: 1.0, Offset: 0.0
+   */
+  bool lockin_spi_error_b;
+
+  /*!
+   * \brief Lockin_seq_U
+   *
+   * \details Result counter, wraps at 255: a gap means results were lost.
+   *
+   *  Scale: 1.0, Offset: 0.0
+   */
+  uint8_t lockin_seq_u;
+#ifdef LIBCAN_TIMESTAMP
+  uint64_t timestamp;
+#endif
+};
+
 /*! @} */
 /*! @} */ // end of CAN_Defines
 
 union CAN_PACKING CanAcquisinatorMessage {
   struct CanAcquisinatorAcquisinatorRaw acquisinator_raw;
+  struct CanAcquisinatorAcquisinatorLockin acquisinator_lockin;
+  struct CanAcquisinatorAcquisinatorLockinStatus acquisinator_lockin_status;
 };
 
 constexpr size_t can_acquisinator_max_size =

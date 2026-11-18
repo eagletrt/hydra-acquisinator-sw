@@ -53,8 +53,6 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-void dwt_init(void);
-void dwt_delay_us(uint32_t delay_us);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

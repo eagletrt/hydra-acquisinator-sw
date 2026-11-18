@@ -108,5 +108,39 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
 
 /* USER CODE BEGIN 1 */
 
+/*!
+ * \brief Run TIM2 (sampling interrupt) at \p rate_hz, keeping the CubeMX prescaler.
+ *
+ * \details APB1 runs at HCLK/2, so the timer kernel clock is 2 x PCLK1. ARR is
+ *     preloaded: an update event loads it now, and its flag is cleared so no
+ *     spurious interrupt fires at start.
+ */
+void tim_sampling_start(uint32_t rate_hz) {
+  const uint32_t counter_hz = 2U * HAL_RCC_GetPCLK1Freq() / (htim2.Init.Prescaler + 1U);
+  __HAL_TIM_SET_AUTORELOAD(&htim2, (counter_hz / rate_hz) - 1U);
+  HAL_TIM_GenerateEvent(&htim2, TIM_EVENTSOURCE_UPDATE);
+  __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
+  HAL_TIM_Base_Start_IT(&htim2);
+}
+
+/*!
+ * \brief Enable the Cortex-M4 cycle counter used by dwt_delay_us.
+ */
+void dwt_init(void) {
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk; // counter runs without a debugger too
+  DWT->CYCCNT = 0U;
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+}
+
+/*!
+ * \brief Busy-wait on the cycle counter: safe inside ISRs, where HAL_GetTick is frozen.
+ */
+void dwt_delay_us(uint32_t delay_us) {
+  const uint32_t start = DWT->CYCCNT;
+  const uint32_t cycles = delay_us * (SystemCoreClock / 1000000U);
+  while (DWT->CYCCNT - start < cycles) {
+  }
+}
+
 /* USER CODE END 1 */
 

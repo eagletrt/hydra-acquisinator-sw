@@ -41,6 +41,9 @@ extern TIM_HandleTypeDef htim2;
 void MX_TIM2_Init(void);
 
 /* USER CODE BEGIN Prototypes */
+void tim_sampling_start(uint32_t rate_hz);
+void dwt_init(void);
+void dwt_delay_us(uint32_t delay_us);
 
 /* USER CODE END Prototypes */
 

@@ -23,6 +23,8 @@
 bool can_acquisinator_api_id_is_valid(enum CanAcquisinatorMessageFrameId id) {
   switch (id) {
   case CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_RAW:
+  case CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_LOCKIN:
+  case CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_LOCKIN_STATUS:
     return true;
   default:
     return false;
@@ -51,6 +53,10 @@ can_acquisinator_api_index_from_id(enum CanAcquisinatorMessageFrameId id) {
   switch (id) {
   case CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_RAW:
     return CAN_ACQUISINATOR_MESSAGE_INDEX_ACQUISINATOR_RAW;
+  case CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_LOCKIN:
+    return CAN_ACQUISINATOR_MESSAGE_INDEX_ACQUISINATOR_LOCKIN;
+  case CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_LOCKIN_STATUS:
+    return CAN_ACQUISINATOR_MESSAGE_INDEX_ACQUISINATOR_LOCKIN_STATUS;
   default:
     return CAN_ACQUISINATOR_MESSAGE_INDEX_INVALID;
   }
@@ -67,6 +73,10 @@ can_acquisinator_api_id_from_index(enum CanAcquisinatorMessageIndex index) {
   switch (index) {
   case CAN_ACQUISINATOR_MESSAGE_INDEX_ACQUISINATOR_RAW:
     return CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_RAW;
+  case CAN_ACQUISINATOR_MESSAGE_INDEX_ACQUISINATOR_LOCKIN:
+    return CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_LOCKIN;
+  case CAN_ACQUISINATOR_MESSAGE_INDEX_ACQUISINATOR_LOCKIN_STATUS:
+    return CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_LOCKIN_STATUS;
   default:
     return CAN_ACQUISINATOR_MESSAGE_FRAME_ID_INVALID;
   }
@@ -78,6 +88,28 @@ can_acquisinator_api_id_from_index(enum CanAcquisinatorMessageIndex index) {
  *  @{
  */
 
+/*!
+ * \brief Encode Lockin_inPhase signal from ACQUISINATOR_LOCKIN message
+ * \param[in] value Floating point value to encode
+ * \return Encoded value as uint32_t
+ */
+[[nodiscard]]
+EAGLETRT_STATIC_INLINE
+    uint32_t prv_acquisinator_lockin_lockin_inphase_encode(float value) {
+  float clamped = EAGLETRT_API_CLAMP(value, -214748.3648f, 214748.3647f);
+  return (uint32_t)(int32_t)roundf(clamped / 0.0001f);
+}
+/*!
+ * \brief Encode Lockin_quadrature signal from ACQUISINATOR_LOCKIN message
+ * \param[in] value Floating point value to encode
+ * \return Encoded value as uint32_t
+ */
+[[nodiscard]]
+EAGLETRT_STATIC_INLINE
+    uint32_t prv_acquisinator_lockin_lockin_quadrature_encode(float value) {
+  float clamped = EAGLETRT_API_CLAMP(value, -214748.3648f, 214748.3647f);
+  return (uint32_t)(int32_t)roundf(clamped / 0.0001f);
+}
 /*! @} */
 
 /*! \defgroup CAN_Decode_Functions Signal Decoding Functions
@@ -85,6 +117,30 @@ can_acquisinator_api_id_from_index(enum CanAcquisinatorMessageIndex index) {
  * integer) values.
  *  @{
  */
+
+/*!
+ * \brief Decode Lockin_inPhase signal from ACQUISINATOR_LOCKIN message
+ * \param[in] value Encoded value as uint32_t
+ * \return Decoded floating point value
+ */
+[[nodiscard]]
+EAGLETRT_STATIC_INLINE float
+prv_acquisinator_lockin_lockin_inphase_decode(uint32_t raw) {
+  int32_t raw_signed = (int32_t)raw;
+  return (float)raw_signed * 0.0001f;
+}
+
+/*!
+ * \brief Decode Lockin_quadrature signal from ACQUISINATOR_LOCKIN message
+ * \param[in] value Encoded value as uint32_t
+ * \return Decoded floating point value
+ */
+[[nodiscard]]
+EAGLETRT_STATIC_INLINE float
+prv_acquisinator_lockin_lockin_quadrature_decode(uint32_t raw) {
+  int32_t raw_signed = (int32_t)raw;
+  return (float)raw_signed * 0.0001f;
+}
 
 /*! @} */
 
@@ -137,6 +193,65 @@ int8_t can_acquisinator_api_serialize_from_id(
     return can_acquisinator_byte_size_acquisinator_raw;
   }
 
+  case CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_LOCKIN: {
+    uint32_t lockin_inphase = prv_acquisinator_lockin_lockin_inphase_encode(
+        data->acquisinator_lockin.lockin_inphase);
+    uint32_t lockin_quadrature =
+        prv_acquisinator_lockin_lockin_quadrature_encode(
+            data->acquisinator_lockin.lockin_quadrature);
+
+    memset(dst_p, 0, 8);
+    dst_p[0] |= int_pack_left_shift_u32(lockin_inphase, 0U, 0xffU);
+    dst_p[1] |= int_pack_right_shift_u32(lockin_inphase, 8U, 0xffU);
+    dst_p[2] |= int_pack_right_shift_u32(lockin_inphase, 16U, 0xffU);
+    dst_p[3] |= int_pack_right_shift_u32(lockin_inphase, 24U, 0xffU);
+    dst_p[4] |= int_pack_left_shift_u32(lockin_quadrature, 0U, 0xffU);
+    dst_p[5] |= int_pack_right_shift_u32(lockin_quadrature, 8U, 0xffU);
+    dst_p[6] |= int_pack_right_shift_u32(lockin_quadrature, 16U, 0xffU);
+    dst_p[7] |= int_pack_right_shift_u32(lockin_quadrature, 24U, 0xffU);
+    return can_acquisinator_byte_size_acquisinator_lockin;
+  }
+
+  case CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_LOCKIN_STATUS: {
+
+    memset(dst_p, 0, 8);
+    dst_p[0] |= int_pack_left_shift_u16(
+        EAGLETRT_API_MIN(data->acquisinator_lockin_status.lockin_dc_u,
+                         (uint16_t)(65535)),
+        0u, 0xffU);
+    dst_p[1] |= int_pack_right_shift_u16(
+        EAGLETRT_API_MIN(data->acquisinator_lockin_status.lockin_dc_u,
+                         (uint16_t)(65535)),
+        8u, 0xffU);
+    dst_p[2] |= int_pack_left_shift_u16(
+        EAGLETRT_API_MIN(data->acquisinator_lockin_status.lockin_min_u,
+                         (uint16_t)(65535)),
+        0u, 0xffU);
+    dst_p[3] |= int_pack_right_shift_u16(
+        EAGLETRT_API_MIN(data->acquisinator_lockin_status.lockin_min_u,
+                         (uint16_t)(65535)),
+        8u, 0xffU);
+    dst_p[4] |= int_pack_left_shift_u16(
+        EAGLETRT_API_MIN(data->acquisinator_lockin_status.lockin_max_u,
+                         (uint16_t)(65535)),
+        0u, 0xffU);
+    dst_p[5] |= int_pack_right_shift_u16(
+        EAGLETRT_API_MIN(data->acquisinator_lockin_status.lockin_max_u,
+                         (uint16_t)(65535)),
+        8u, 0xffU);
+    dst_p[6] |= int_pack_left_shift_u8(
+        data->acquisinator_lockin_status.lockin_spi_error_b, 0u, 0x01U);
+    dst_p[6] |= int_pack_left_shift_u8(
+        EAGLETRT_API_MIN(data->acquisinator_lockin_status.lockin_seq_u,
+                         (uint8_t)(255)),
+        1u, 0xfeU);
+    dst_p[7] |= int_pack_right_shift_u8(
+        EAGLETRT_API_MIN(data->acquisinator_lockin_status.lockin_seq_u,
+                         (uint8_t)(255)),
+        7u, 0x01U);
+    return can_acquisinator_byte_size_acquisinator_lockin_status;
+  }
+
   default:
     return -1;
   }
@@ -176,6 +291,50 @@ int8_t can_acquisinator_api_deserialize_from_id(
         int_unpack_right_shift_u8(data[6], 0U, 0xffU);
 #ifdef LIBCAN_TIMESTAMP
     dst_p->acquisinator_raw.timestamp = timestamp;
+#endif // LIBCAN_TIMESTAMP
+    return 0;
+  }
+  case CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_LOCKIN: {
+    uint32_t lockin_inphase_raw = {};
+    uint32_t lockin_quadrature_raw = {};
+    lockin_inphase_raw |= int_unpack_right_shift_u32(data[0], 0U, 0xffU);
+    lockin_inphase_raw |= int_unpack_left_shift_u32(data[1], 8U, 0xffU);
+    lockin_inphase_raw |= int_unpack_left_shift_u32(data[2], 16U, 0xffU);
+    lockin_inphase_raw |= int_unpack_left_shift_u32(data[3], 24U, 0xffU);
+    dst_p->acquisinator_lockin.lockin_inphase =
+        prv_acquisinator_lockin_lockin_inphase_decode(lockin_inphase_raw);
+    lockin_quadrature_raw |= int_unpack_right_shift_u32(data[4], 0U, 0xffU);
+    lockin_quadrature_raw |= int_unpack_left_shift_u32(data[5], 8U, 0xffU);
+    lockin_quadrature_raw |= int_unpack_left_shift_u32(data[6], 16U, 0xffU);
+    lockin_quadrature_raw |= int_unpack_left_shift_u32(data[7], 24U, 0xffU);
+    dst_p->acquisinator_lockin.lockin_quadrature =
+        prv_acquisinator_lockin_lockin_quadrature_decode(lockin_quadrature_raw);
+#ifdef LIBCAN_TIMESTAMP
+    dst_p->acquisinator_lockin.timestamp = timestamp;
+#endif // LIBCAN_TIMESTAMP
+    return 0;
+  }
+  case CAN_ACQUISINATOR_MESSAGE_FRAME_ID_ACQUISINATOR_LOCKIN_STATUS: {
+    dst_p->acquisinator_lockin_status.lockin_dc_u =
+        int_unpack_right_shift_u16(data[0], 0U, 0xffU);
+    dst_p->acquisinator_lockin_status.lockin_dc_u |=
+        int_unpack_left_shift_u16(data[1], 8U, 0xffU);
+    dst_p->acquisinator_lockin_status.lockin_min_u =
+        int_unpack_right_shift_u16(data[2], 0U, 0xffU);
+    dst_p->acquisinator_lockin_status.lockin_min_u |=
+        int_unpack_left_shift_u16(data[3], 8U, 0xffU);
+    dst_p->acquisinator_lockin_status.lockin_max_u =
+        int_unpack_right_shift_u16(data[4], 0U, 0xffU);
+    dst_p->acquisinator_lockin_status.lockin_max_u |=
+        int_unpack_left_shift_u16(data[5], 8U, 0xffU);
+    dst_p->acquisinator_lockin_status.lockin_spi_error_b =
+        int_unpack_right_shift_u8(data[6], 0U, 0x01U);
+    dst_p->acquisinator_lockin_status.lockin_seq_u =
+        int_unpack_right_shift_u8(data[6], 1U, 0xfeU);
+    dst_p->acquisinator_lockin_status.lockin_seq_u |=
+        int_unpack_left_shift_u8(data[7], 7U, 0x01U);
+#ifdef LIBCAN_TIMESTAMP
+    dst_p->acquisinator_lockin_status.timestamp = timestamp;
 #endif // LIBCAN_TIMESTAMP
     return 0;
   }

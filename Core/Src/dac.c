@@ -112,6 +112,16 @@ void HAL_DAC_MspDeInit(DAC_HandleTypeDef* dacHandle)
 }
 
 /* USER CODE BEGIN 1 */
+void dac_excitation_start(uint16_t code) {
+  dac_excitation_write(code);
+  if (HAL_DAC_Start(&hdac1, DAC_CHANNEL_1) != HAL_OK) {
+    Error_Handler();
+  }
+}
+
+void dac_excitation_write(uint16_t code) {
+  HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, code);
+}
 
 /* USER CODE END 1 */
 
